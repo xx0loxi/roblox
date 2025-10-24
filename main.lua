@@ -1,4 +1,4 @@
--- RAGE MOD - ULTIMATE VERSION WITH ADVANCED SPEED
+-- RAGE MOD - ULTIMATE VERSION WITH FIXED AIMBOT
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
@@ -20,16 +20,15 @@ local TweenService = game:GetService("TweenService")
 local AdvancedSpeed = {
     Enabled = false,
     Value = 50,
-    CurrentMethod = "Auto", -- Auto, Humanoid, BodyVelocity, Tween
+    CurrentMethod = "Auto",
     BodyVelocity = nil,
     Connection = nil,
     OriginalWalkSpeed = 16,
     LastMethodCheck = 0,
-    MethodCheckInterval = 5, -- Проверять метод каждые 5 секунд
-    SafeMethods = {} -- Доступные безопасные методы
+    MethodCheckInterval = 5,
+    SafeMethods = {}
 }
 
--- Определение доступных методов
 local function DetectSafeMethods()
     AdvancedSpeed.SafeMethods = {
         Humanoid = true,
@@ -37,7 +36,6 @@ local function DetectSafeMethods()
         Tween = true
     }
     
-    -- Проверяем наличие античита по имени
     local antiCheatDetected = false
     for _, service in pairs(game:GetChildren()) do
         if string.find(service.Name:lower(), "anti") or string.find(service.Name:lower(), "cheat") then
@@ -47,7 +45,6 @@ local function DetectSafeMethods()
     end
     
     if antiCheatDetected then
-        -- При обнаружении античита ограничиваем методы
         AdvancedSpeed.SafeMethods.BodyVelocity = false
         AdvancedSpeed.SafeMethods.Tween = false
     end
@@ -55,11 +52,9 @@ local function DetectSafeMethods()
     return AdvancedSpeed.SafeMethods
 end
 
--- Автоматический выбор лучшего метода
 local function GetBestSpeedMethod()
     local methods = DetectSafeMethods()
     
-    -- Приоритет методов в зависимости от игры
     if methods.BodyVelocity then
         return "BodyVelocity"
     elseif methods.Tween then
@@ -69,7 +64,6 @@ local function GetBestSpeedMethod()
     end
 end
 
--- УЛУЧШЕННЫЙ МЕТОД BodyVelocity С АНТИ-ДЕТЕКТОМ
 local function EnableBodyVelocitySpeed()
     if AdvancedSpeed.BodyVelocity then 
         DisableBodyVelocitySpeed()
@@ -81,7 +75,6 @@ local function EnableBodyVelocitySpeed()
     local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
     if not humanoidRootPart then return false end
 
-    -- Создаем BodyVelocity с рандомными параметрами для обхода античита
     local success, result = pcall(function()
         AdvancedSpeed.BodyVelocity = Instance.new("BodyVelocity")
         AdvancedSpeed.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
@@ -92,13 +85,11 @@ local function EnableBodyVelocitySpeed()
         )
         AdvancedSpeed.BodyVelocity.P = math.random(1200, 1300)
         
-        -- Случайное имя для обхода детекта
         local randomNames = {"VelocityHelper", "MoveAssist", "PlayerHelper", "GameComponent"}
         AdvancedSpeed.BodyVelocity.Name = randomNames[math.random(1, #randomNames)]
         
         AdvancedSpeed.BodyVelocity.Parent = humanoidRootPart
         
-        -- Прячем в сетевом владельце
         if humanoidRootPart:FindFirstChildOfClass("NetworkOwner") then
             AdvancedSpeed.BodyVelocity.Parent = humanoidRootPart:FindFirstChildOfClass("NetworkOwner")
         end
@@ -131,7 +122,6 @@ local function EnableBodyVelocitySpeed()
             moveDirection = moveDirection.Unit * AdvancedSpeed.Value
             moveDirection = Vector3.new(moveDirection.X, 0, moveDirection.Z)
             
-            -- Добавляем небольшую случайность для обхода детекта
             local randomFactor = Vector3.new(
                 moveDirection.X * math.random(95, 105) / 100,
                 0,
@@ -147,7 +137,6 @@ local function EnableBodyVelocitySpeed()
     return true
 end
 
--- МЕТОД Tween ДЛЯ ОБХОДА АНТИЧИТОВ
 local function EnableTweenSpeed()
     local character = LocalPlayer.Character
     if not character then return false end
@@ -177,15 +166,14 @@ local function EnableTweenSpeed()
             moveDirection = moveDirection.Unit * AdvancedSpeed.Value
             moveDirection = Vector3.new(moveDirection.X, 0, moveDirection.Z)
             
-            -- Используем TweenService для плавного движения
             local targetPosition = humanoidRootPart.Position + moveDirection * 0.1
             local tweenInfo = TweenInfo.new(
-                0.1, -- Время
+                0.1,
                 Enum.EasingStyle.Linear,
                 Enum.EasingDirection.Out,
-                0, -- Повторы
-                false, -- Обратно
-                0 -- Задержка
+                0,
+                false,
+                0
             )
             
             local tween = TweenService:Create(humanoidRootPart, tweenInfo, {Position = targetPosition})
@@ -196,7 +184,6 @@ local function EnableTweenSpeed()
     return true
 end
 
--- МЕТОД Humanoid С ОБХОДОМ ПРОВЕРОК
 local function EnableHumanoidSpeed()
     AdvancedSpeed.Connection = RunService.Heartbeat:Connect(function()
         if not AdvancedSpeed.Enabled then return end
@@ -208,11 +195,9 @@ local function EnableHumanoidSpeed()
             local humanoid = character:FindFirstChild("Humanoid")
             if not humanoid then return end
             
-            -- Устанавливаем скорость с небольшой случайностью
             local randomSpeed = AdvancedSpeed.Value * math.random(98, 102) / 100
             humanoid.WalkSpeed = randomSpeed
             
-            -- Периодически возвращаем нормальную скорость для обхода проверок
             if math.random(1, 100) == 1 then
                 humanoid.WalkSpeed = AdvancedSpeed.OriginalWalkSpeed
                 wait(0.05)
@@ -238,11 +223,9 @@ local function DisableBodyVelocitySpeed()
     end
 end
 
--- АВТОМАТИЧЕСКОЕ ВКЛЮЧЕНИЕ СКОРОСТИ С ВЫБОРОМ ЛУЧШЕГО МЕТОДА
 local function EnableAdvancedSpeed()
     DisableBodyVelocitySpeed()
     
-    -- Определяем лучший метод
     local bestMethod = GetBestSpeedMethod()
     AdvancedSpeed.CurrentMethod = bestMethod
     
@@ -251,7 +234,6 @@ local function EnableAdvancedSpeed()
     if bestMethod == "BodyVelocity" then
         success = EnableBodyVelocitySpeed()
         if not success then
-            -- Пробуем следующий метод если BodyVelocity не сработал
             bestMethod = GetBestSpeedMethod()
             if bestMethod == "Tween" then
                 success = EnableTweenSpeed()
@@ -278,7 +260,7 @@ local function EnableAdvancedSpeed()
     return success
 end
 
--- Все функции выключены по умолчанию
+-- Настройки
 local Settings = {
     Noclip = false,
     Fly = {
@@ -326,14 +308,11 @@ local Settings = {
         PredictionAmount = 0.1,
         MaxDistance = 500,
         WallCheck = true,
-        Priority = "Closest",
-        TargetLock = true,
-        LockTime = 2.0,
-        TargetSwitchCooldown = 0.5
+        Priority = "Closest"
     }
 }
 
--- Улучшенные уведомления
+-- Уведомления
 local function Notify(message)
     Rayfield:Notify({
         Title = "RAGE MOD ULTIMATE",
@@ -342,7 +321,7 @@ local function Notify(message)
     })
 end
 
--- УЛУЧШЕННЫЙ ТЕЛЕПОРТ НА КУРСОР
+-- Телепорт на курсор
 local function TpToCursor()
     if not LocalPlayer.Character then
         Notify("Персонаж не найден")
@@ -379,15 +358,13 @@ local function TpToCursor()
     end
 end
 
--- УЛУЧШЕННЫЙ АИМБОТ С СИСТЕМОЙ БЛОКИРОВКИ ЦЕЛИ
+-- ИСПРАВЛЕННЫЙ АИМБОТ
 local Aimbot = {
     Target = nil,
     Connection = nil,
     FOVCircle = nil,
     LastUpdate = 0,
-    LastTargetSwitch = 0,
-    TargetLockTime = 0,
-    IsTargetLocked = false
+    IsAiming = false
 }
 
 local function CreateFOVCircle()
@@ -450,7 +427,6 @@ local function IsInRange(target)
     return distance <= Settings.Aimbot.MaxDistance
 end
 
--- УЛУЧШЕННАЯ ПРОВЕРКА ЦЕЛИ
 local function IsValidTarget(target)
     if target == LocalPlayer then return false end
     if not target.Character then return false end
@@ -475,36 +451,10 @@ local function IsValidTarget(target)
     return true
 end
 
--- ФУНКЦИЯ: Проверка может ли аимбот выбрать цель
-local function CanAimbotTarget(player)
-    return IsValidTarget(player)
-end
-
--- УЛУЧШЕННЫЙ АЛГОРИТМ ВЫБОРА ЦЕЛИ
 local function GetBestTarget()
     local bestTarget = nil
     local bestScore = -math.huge
     local mousePos = UIS:GetMouseLocation()
-    local currentTime = tick()
-    
-    -- Если включена блокировка цели и у нас есть текущая цель
-    if Settings.Aimbot.TargetLock and Aimbot.Target and Aimbot.IsTargetLocked then
-        if IsValidTarget(Aimbot.Target) then
-            -- Проверяем не истекло ли время блокировки
-            if currentTime - Aimbot.TargetLockTime <= Settings.Aimbot.LockTime then
-                return Aimbot.Target -- Возвращаем заблокированную цель
-            else
-                Aimbot.IsTargetLocked = false -- Снимаем блокировку
-            end
-        else
-            Aimbot.IsTargetLocked = false -- Снимаем блокировку если цель невалидна
-        end
-    end
-    
-    -- Проверяем задержку перед сменой цели
-    if currentTime - Aimbot.LastTargetSwitch < Settings.Aimbot.TargetSwitchCooldown then
-        return Aimbot.Target -- Возвращаем текущую цель если не прошла задержка
-    end
     
     for _, player in pairs(Players:GetPlayers()) do
         if not IsValidTarget(player) then continue end
@@ -516,15 +466,12 @@ local function GetBestTarget()
         local score = 0
         local distanceToMouse = (Vector2.new(vector.X, vector.Y) - mousePos).Magnitude
         
-        -- Базовый счет на основе расстояния до курсора
         score = score + (Settings.Aimbot.FOV - distanceToMouse)
         
-        -- Бонус для головы
         if Settings.Aimbot.Part == "Head" then
             score = score + 50
         end
         
-        -- Приоритет ближайшей цели
         local character = LocalPlayer.Character
         local targetChar = player.Character
         if character and targetChar then
@@ -536,31 +483,20 @@ local function GetBestTarget()
             end
         end
         
-        -- Бонус для низкого здоровья
         local humanoid = targetChar:FindFirstChild("Humanoid")
         if humanoid then
             local healthPercent = humanoid.Health / humanoid.MaxHealth
             if healthPercent < 0.3 then
-                score = score + 40 -- Бонус для целей с низким здоровьем
+                score = score + 40
             elseif healthPercent < 0.6 then
                 score = score + 20
             end
-        end
-        
-        -- Бонус для текущей цели
-        if player == Aimbot.Target then
-            score = score + 100 -- Большой бонус для текущей цели
         end
         
         if score > bestScore then
             bestScore = score
             bestTarget = player
         end
-    end
-    
-    -- Если нашли новую цель, обновляем время смены цели
-    if bestTarget and bestTarget ~= Aimbot.Target then
-        Aimbot.LastTargetSwitch = currentTime
     end
     
     return bestTarget
@@ -575,7 +511,6 @@ local function SmoothAim(target)
     local camera = workspace.CurrentCamera
     local currentTime = tick()
     
-    -- Защита от слишком частых обновлений
     if currentTime - Aimbot.LastUpdate < (1 / Settings.Aimbot.Smoothness) * 0.1 then
         return
     end
@@ -590,7 +525,6 @@ local function SmoothAim(target)
         local smoothness = math.max(1, Settings.Aimbot.Smoothness)
         local lerpAlpha = 1 / smoothness
         
-        -- Ускоренное наведение для значений от 2 до 5
         if smoothness <= 5 then
             lerpAlpha = lerpAlpha * 2
         end
@@ -611,27 +545,20 @@ local function StartAimbot()
         local mouseButtonPressed = UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
         
         if mouseButtonPressed then
-            local newTarget = GetBestTarget()
+            if not Aimbot.IsAiming then
+                Aimbot.Target = GetBestTarget()
+                Aimbot.IsAiming = true
+            end
             
-            if newTarget then
-                -- Если это новая цель, устанавливаем блокировку
-                if Aimbot.Target ~= newTarget then
-                    Aimbot.Target = newTarget
-                    Aimbot.TargetLockTime = tick()
-                    Aimbot.IsTargetLocked = Settings.Aimbot.TargetLock
-                end
-                
-                if Aimbot.Target then
-                    SmoothAim(Aimbot.Target)
-                end
+            if Aimbot.Target and IsValidTarget(Aimbot.Target) then
+                SmoothAim(Aimbot.Target)
             else
                 Aimbot.Target = nil
-                Aimbot.IsTargetLocked = false
+                Aimbot.IsAiming = false
             end
         else
-            -- При отпускании кнопки снимаем блокировку
             Aimbot.Target = nil
-            Aimbot.IsTargetLocked = false
+            Aimbot.IsAiming = false
         end
         
         if Aimbot.FOVCircle then
@@ -653,10 +580,10 @@ local function StopAimbot()
     end
     
     Aimbot.Target = nil
-    Aimbot.IsTargetLocked = false
+    Aimbot.IsAiming = false
 end
 
--- ОПТИМИЗИРОВАННАЯ СИСТЕМА ESP С РЕНДЕРИНГОМ КАЖДЫЙ КАДР
+-- ESP система (остается без изменений)
 local function CreateESP(player)
     if Settings.Esp.Boxes[player] then return end
     
@@ -717,34 +644,27 @@ local function CreateESP(player)
 end
 
 local function RemoveESP(player)
-    if Settings.Esp.Boxes[player] then
-        Settings.Esp.Boxes[player]:Remove()
-        Settings.Esp.Boxes[player] = nil
+    for _, drawing in pairs({
+        Settings.Esp.Boxes[player],
+        Settings.Esp.Names[player],
+        Settings.Esp.Distances[player],
+        Settings.Esp.HealthBars[player],
+        Settings.Esp.HealthTexts[player],
+        Settings.Esp.AimbotStatus[player],
+        Settings.Esp.Tracers[player]
+    }) do
+        if drawing then
+            drawing:Remove()
+        end
     end
-    if Settings.Esp.Names[player] then
-        Settings.Esp.Names[player]:Remove()
-        Settings.Esp.Names[player] = nil
-    end
-    if Settings.Esp.Distances[player] then
-        Settings.Esp.Distances[player]:Remove()
-        Settings.Esp.Distances[player] = nil
-    end
-    if Settings.Esp.HealthBars[player] then
-        Settings.Esp.HealthBars[player]:Remove()
-        Settings.Esp.HealthBars[player] = nil
-    end
-    if Settings.Esp.HealthTexts[player] then
-        Settings.Esp.HealthTexts[player]:Remove()
-        Settings.Esp.HealthTexts[player] = nil
-    end
-    if Settings.Esp.AimbotStatus[player] then
-        Settings.Esp.AimbotStatus[player]:Remove()
-        Settings.Esp.AimbotStatus[player] = nil
-    end
-    if Settings.Esp.Tracers[player] then
-        Settings.Esp.Tracers[player]:Remove()
-        Settings.Esp.Tracers[player] = nil
-    end
+    
+    Settings.Esp.Boxes[player] = nil
+    Settings.Esp.Names[player] = nil
+    Settings.Esp.Distances[player] = nil
+    Settings.Esp.HealthBars[player] = nil
+    Settings.Esp.HealthTexts[player] = nil
+    Settings.Esp.AimbotStatus[player] = nil
+    Settings.Esp.Tracers[player] = nil
 end
 
 local function UpdateESP()
@@ -769,20 +689,18 @@ local function UpdateESP()
             if onScreen and distance <= Settings.Esp.MaxDistance then
                 local size = Vector2.new(2000 / position.Z, 4000 / position.Z)
                 
-                -- Бокс
                 if Settings.Esp.ShowBox then
                     box.Size = size
                     box.Position = Vector2.new(position.X - size.X / 2, position.Y - size.Y / 2)
                     box.Visible = true
                     
-                    -- Подсветка текущей цели аимбота
                     if player == Aimbot.Target and Settings.Aimbot.Enabled then
-                        box.Color = Color3.fromRGB(255, 0, 0) -- Красный для текущей цели
+                        box.Color = Color3.fromRGB(255, 0, 0)
                     elseif Settings.Aimbot.Enabled and Settings.Esp.ShowAimbotStatus then
-                        if CanAimbotTarget(player) then
-                            box.Color = Color3.fromRGB(0, 255, 0) -- Зеленый для доступных целей
+                        if IsValidTarget(player) then
+                            box.Color = Color3.fromRGB(0, 255, 0)
                         else
-                            box.Color = Color3.fromRGB(0, 100, 255) -- Синий для недоступных
+                            box.Color = Color3.fromRGB(0, 100, 255)
                         end
                     else
                         if Settings.Esp.TeamColor and player.Team then
@@ -795,7 +713,6 @@ local function UpdateESP()
                     box.Visible = false
                 end
                 
-                -- Имя
                 if Settings.Esp.ShowName then
                     local name = Settings.Esp.Names[player]
                     name.Position = Vector2.new(position.X, position.Y - size.Y / 2 - 20)
@@ -804,7 +721,6 @@ local function UpdateESP()
                     Settings.Esp.Names[player].Visible = false
                 end
                 
-                -- Дистанция
                 if Settings.Esp.ShowDistance then
                     local distanceText = Settings.Esp.Distances[player]
                     distanceText.Text = math.floor(distance) .. " studs"
@@ -814,7 +730,6 @@ local function UpdateESP()
                     Settings.Esp.Distances[player].Visible = false
                 end
                 
-                -- Здоровье
                 if Settings.Esp.ShowHealth and humanoid then
                     local healthPercent = humanoid.Health / humanoid.MaxHealth
                     local healthBar = Settings.Esp.HealthBars[player]
@@ -845,7 +760,6 @@ local function UpdateESP()
                     Settings.Esp.HealthTexts[player].Visible = false
                 end
                 
-                -- Статус аимбота
                 if Settings.Esp.ShowAimbotStatus and Settings.Aimbot.Enabled then
                     local aimbotStatus = Settings.Esp.AimbotStatus[player]
                     aimbotStatus.Position = Vector2.new(position.X, position.Y + size.Y / 2 + 25)
@@ -853,7 +767,7 @@ local function UpdateESP()
                     if player == Aimbot.Target then
                         aimbotStatus.Text = "🔒"
                         aimbotStatus.Color = Color3.fromRGB(255, 0, 0)
-                    elseif CanAimbotTarget(player) then
+                    elseif IsValidTarget(player) then
                         aimbotStatus.Text = "🎯"
                         aimbotStatus.Color = Color3.fromRGB(0, 255, 0)
                     else
@@ -865,7 +779,6 @@ local function UpdateESP()
                     Settings.Esp.AimbotStatus[player].Visible = false
                 end
                 
-                -- Трейсеры
                 if Settings.Esp.ShowTracers then
                     local tracer = Settings.Esp.Tracers[player]
                     tracer.From = screenCenter
@@ -875,7 +788,6 @@ local function UpdateESP()
                     Settings.Esp.Tracers[player].Visible = false
                 end
             else
-                -- Игрок не на экране или слишком далеко - скрываем все элементы
                 box.Visible = false
                 Settings.Esp.Names[player].Visible = false
                 Settings.Esp.Distances[player].Visible = false
@@ -885,7 +797,6 @@ local function UpdateESP()
                 Settings.Esp.Tracers[player].Visible = false
             end
         else
-            -- Игрок не существует - скрываем все элементы
             box.Visible = false
             Settings.Esp.Names[player].Visible = false
             Settings.Esp.Distances[player].Visible = false
@@ -940,7 +851,7 @@ local function DisableESP()
     Settings.Esp.Tracers = {}
 end
 
--- УЛУЧШЕННАЯ СИСТЕМА ПОЛЕТА
+-- Система полета
 local Fly = {
     Connection = nil,
     BodyVelocity = nil
@@ -1016,7 +927,7 @@ local function StopFly()
     end)
 end
 
--- БЫСТРЫЙ НОКЛИП
+-- Ноклип
 local NoclipConnection
 local function EnableNoclip()
     if NoclipConnection then return end
@@ -1043,7 +954,7 @@ local function DisableNoclip()
     end
 end
 
--- ИНТЕРФЕЙС
+-- Интерфейс
 local MainTab = Window:CreateTab("Главная")
 local MovementSection = MainTab:CreateSection("Передвижение")
 
@@ -1093,14 +1004,12 @@ local FlySpeedSlider = MainTab:CreateSlider({
     end
 })
 
--- УЛУЧШЕННАЯ СИСТЕМА СКОРОСТИ С АВТОМАТИЧЕСКИМ АНТИ-ДЕТЕКТОМ
 local SpeedToggle = MainTab:CreateToggle({
     Name = "🏃 УЛУЧШЕННАЯ СКОРОСТЬ",
     CurrentValue = false,
     Callback = function(Value)
         Settings.Speed.Enabled = Value
         if not Value then
-            -- Выключаем скорость
             DisableBodyVelocitySpeed()
             AdvancedSpeed.Enabled = false
             
@@ -1112,7 +1021,6 @@ local SpeedToggle = MainTab:CreateToggle({
             
             Notify("Скорость выключена")
         else
-            -- Включаем скорость с автоматическим выбором метода
             AdvancedSpeed.Enabled = true
             local success = EnableAdvancedSpeed()
             
@@ -1136,7 +1044,6 @@ local SpeedSlider = MainTab:CreateSlider({
         Settings.Speed.Value = Value
         AdvancedSpeed.Value = Value
         
-        -- Обновляем скорость если она включена
         if Settings.Speed.Enabled then
             EnableAdvancedSpeed()
         end
@@ -1154,7 +1061,7 @@ local InfiniteJumpToggle = MainTab:CreateToggle({
     end
 })
 
--- ВКЛАДКА ESP
+-- Вкладка ESP
 local VisualsTab = Window:CreateTab("ESP")
 local VisualsSection = VisualsTab:CreateSection("Основные настройки")
 
@@ -1239,7 +1146,7 @@ local MaxDistanceSlider = VisualsTab:CreateSlider({
     end
 })
 
--- ВКЛАДКА АИМБОТ
+-- Вкладка Аимбот (ИСПРАВЛЕННАЯ)
 local CombatTab = Window:CreateTab("Аимбот")
 local AimbotSection = CombatTab:CreateSection("Настройки аимбота")
 
@@ -1250,20 +1157,11 @@ local AimbotToggle = CombatTab:CreateToggle({
         Settings.Aimbot.Enabled = Value
         if Value then
             StartAimbot()
-            Notify("Аимбот включен - Зажмите ПКМ")
+            Notify("Аимбот включен - Зажмите ПКМ для фиксации цели")
         else
             StopAimbot()
             Notify("Аимбот выключен")
         end
-    end
-})
-
-local TargetLockToggle = CombatTab:CreateToggle({
-    Name = "🔒 БЛОКИРОВКА ЦЕЛИ",
-    CurrentValue = true,
-    Callback = function(Value)
-        Settings.Aimbot.TargetLock = Value
-        Notify(Value and "Блокировка цели включена" or "Блокировка цели выключена")
     end
 })
 
@@ -1286,28 +1184,6 @@ local AimbotSmoothSlider = CombatTab:CreateSlider({
     CurrentValue = Settings.Aimbot.Smoothness,
     Callback = function(Value)
         Settings.Aimbot.Smoothness = Value
-    end
-})
-
-local TargetLockTimeSlider = CombatTab:CreateSlider({
-    Name = "⏱️ ВРЕМЯ БЛОКИРОВКИ ЦЕЛИ",
-    Range = {0.5, 5},
-    Increment = 0.1,
-    Suffix = "sec",
-    CurrentValue = Settings.Aimbot.LockTime,
-    Callback = function(Value)
-        Settings.Aimbot.LockTime = Value
-    end
-})
-
-local TargetSwitchCooldownSlider = CombatTab:CreateSlider({
-    Name = "🔄 ЗАДЕРЖКА СМЕНЫ ЦЕЛИ",
-    Range = {0.1, 2},
-    Increment = 0.1,
-    Suffix = "sec",
-    CurrentValue = Settings.Aimbot.TargetSwitchCooldown,
-    Callback = function(Value)
-        Settings.Aimbot.TargetSwitchCooldown = Value
     end
 })
 
@@ -1347,7 +1223,7 @@ local VisibleCheckToggle = CombatTab:CreateToggle({
     end
 })
 
--- ВКЛАДКА ЗАЩИТА
+-- Вкладка Защита
 local ProtectionTab = Window:CreateTab("Защита")
 local ProtectionSection = ProtectionTab:CreateSection("Функции защиты")
 
@@ -1380,13 +1256,12 @@ local AntiAfkToggle = ProtectionTab:CreateToggle({
     end
 })
 
--- ОСНОВНЫЕ ЦИКЛЫ
+-- Основные циклы
 RunService.Heartbeat:Connect(function()
     pcall(function()
         local character = LocalPlayer.Character
         if not character then return end
         
-        -- Автоматическая проверка и смена метода скорости
         local currentTime = tick()
         if currentTime - AdvancedSpeed.LastMethodCheck > AdvancedSpeed.MethodCheckInterval then
             AdvancedSpeed.LastMethodCheck = currentTime
@@ -1433,15 +1308,14 @@ Players.PlayerRemoving:Connect(function(player)
     RemoveESP(player)
 end)
 
--- ЗАПОМИНАЕМ СТАНДАРТНУЮ СКОРОСТЬ ПРИ ЗАПУСКЕ
+-- Запоминаем стандартную скорость
 pcall(function()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         AdvancedSpeed.OriginalWalkSpeed = LocalPlayer.Character.Humanoid.WalkSpeed
     end
 end)
 
--- АВТОМАТИЧЕСКОЕ ОПРЕДЕЛЕНИЕ ДОСТУПНЫХ МЕТОДОВ
 DetectSafeMethods()
 
-Notify("RAGE MOD ULTIMATE ADVANCED загружен! Все функции выключены по умолчанию.")
-print("RAGE MOD ULTIMATE ADVANCED: Система активирована с улучшенным анти-детектом скорости")
+Notify("RAGE MOD ULTIMATE с исправленным аимботом загружен!")
+print("RAGE MOD ULTIMATE: Аимбот фиксируется на цели только при зажатой ПКМ")
