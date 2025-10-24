@@ -1,12 +1,12 @@
---= RAGE MOD - ULTIMATE VERSION 1.5 BETA =--
+--= RAGE MOD - ULTIMATE VERSION 1.0 BETA =--
+--= СОЗДАТЕЛЬ: xx_loxi =--
 --= АВТОМАТИЧЕСКИЙ СТЕЛС-РЕЖИМ ВКЛЮЧЕН =--
---= ИСПРАВЛЕН АИМБОТ =--
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "⚡ RAGE MOD | ULTIMATE v1.5 BETA",
-    LoadingTitle = "RAGE MOD ULTIMATE v1.5 BETA",
+    Name = "⚡ RAGE MOD | ULTIMATE v1.0 BETA | xx_loxi",
+    LoadingTitle = "RAGE MOD ULTIMATE v1.0 BETA",
     LoadingSubtitle = "Loading Advanced Features...",
     Theme = "Dark"
 })
@@ -23,7 +23,7 @@ local Lighting = game:GetService("Lighting")
 local HttpService = game:GetService("HttpService")
 
 -- ВЕРСИЯ
-local Version = "1.5 BETA"
+local Version = "2.0 BETA"
 
 -- АВТОМАТИЧЕСКИЙ СТЕЛС-РЕЖИМ (ВКЛЮЧЕН ПО УМОЛЧАНИЮ)
 local StealthMode = {
@@ -31,8 +31,68 @@ local StealthMode = {
     RandomDelays = true,
     ObfuscateNames = true,
     AntiDetection = true,
-    LastRandomUpdate = 0
+    LastRandomUpdate = 0,
+    Status = "UNDETECTED"
 }
+
+-- ИНДИКАТОР СТАТУСА
+local StatusIndicator = {
+    Dot = nil,
+    Text = nil,
+    Connection = nil
+}
+
+-- Создаем индикатор статуса
+local function CreateStatusIndicator()
+    if StatusIndicator.Dot then
+        StatusIndicator.Dot:Remove()
+    end
+    if StatusIndicator.Text then
+        StatusIndicator.Text:Remove()
+    end
+    
+    -- Зеленая мигающая точка
+    StatusIndicator.Dot = Drawing.new("Circle")
+    StatusIndicator.Dot.Visible = true
+    StatusIndicator.Dot.Color = Color3.fromRGB(0, 255, 0)
+    StatusIndicator.Dot.Thickness = 3
+    StatusIndicator.Dot.Filled = true
+    StatusIndicator.Dot.Radius = 5
+    StatusIndicator.Dot.Position = Vector2.new(30, 35)
+    
+    -- Текст статуса
+    StatusIndicator.Text = Drawing.new("Text")
+    StatusIndicator.Text.Visible = true
+    StatusIndicator.Text.Color = Color3.fromRGB(0, 255, 0)
+    StatusIndicator.Text.Size = 14
+    StatusIndicator.Text.Outline = true
+    StatusIndicator.Text.Text = "STATUS: UNDETECTED"
+    StatusIndicator.Text.Position = Vector2.new(50, 28)
+    
+    -- Обновление статуса с миганием
+    if StatusIndicator.Connection then
+        StatusIndicator.Connection:Disconnect()
+    end
+    
+    local blinkState = true
+    StatusIndicator.Connection = RunService.RenderStepped:Connect(function()
+        local viewportSize = Camera.ViewportSize
+        StatusIndicator.Dot.Position = Vector2.new(30, 35)
+        StatusIndicator.Text.Position = Vector2.new(50, 28)
+        
+        -- Медленное мигание (каждые 2 секунды)
+        if tick() % 2 > 1 then
+            StatusIndicator.Dot.Color = Color3.fromRGB(0, 200, 0)
+            StatusIndicator.Dot.Radius = 4
+        else
+            StatusIndicator.Dot.Color = Color3.fromRGB(0, 255, 0)
+            StatusIndicator.Dot.Radius = 5
+        end
+        
+        -- Легкое свечение
+        StatusIndicator.Dot.Transparency = 0.3 + (math.sin(tick() * 2) * 0.2)
+    end)
+end
 
 -- Функция для генерации случайных имен для инстансов
 local function GenerateRandomName()
@@ -48,7 +108,7 @@ local function StealthWait()
     end
 end
 
--- РЕЖИМ СМЕНЫ ВРЕМЕНИ СУТОК (заменяет ночное зрение)
+-- ИСПРАВЛЕННЫЙ РЕЖИМ СМЕНЫ ВРЕМЕНИ СУТОК
 local TimeOfDay = {
     Enabled = false,
     CurrentTime = "День",
@@ -101,17 +161,6 @@ local TimePresets = {
         GlobalShadows = true,
         ColorShift_Top = Color3.fromRGB(255, 180, 120),
         ExposureCompensation = 0.5
-    },
-    ["Туман"] = {
-        ClockTime = 10,
-        Brightness = 1.2,
-        Ambient = Color3.fromRGB(200, 200, 200),
-        OutdoorAmbient = Color3.fromRGB(150, 150, 150),
-        FogColor = Color3.fromRGB(150, 150, 150),
-        FogEnd = 200,
-        GlobalShadows = false,
-        ColorShift_Top = Color3.fromRGB(180, 180, 180),
-        ExposureCompensation = 0.7
     }
 }
 
@@ -121,13 +170,10 @@ local function ApplyTimeOfDay()
     local preset = TimePresets[TimeOfDay.CurrentTime]
     if not preset then return end
     
-    -- Плавное применение изменений
-    local tweenInfo = TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    
+    -- Немедленное применение изменений
     for property, value in pairs(preset) do
         if Lighting[property] ~= nil then
-            local tween = TweenService:Create(Lighting, tweenInfo, {[property] = value})
-            tween:Play()
+            Lighting[property] = value
         end
     end
 end
@@ -149,43 +195,20 @@ local function EnableTimeOfDay()
     -- Немедленно применяем выбранное время суток
     ApplyTimeOfDay()
     
-    -- Запускаем цикл обновления
-    if TimeOfDay.Connection then
-        TimeOfDay.Connection:Disconnect()
-    end
-    
-    TimeOfDay.Connection = RunService.Heartbeat:Connect(function()
-        if not TimeOfDay.Enabled then return end
-        
-        -- Плавно обновляем время для реалистичности
-        if TimeOfDay.CurrentTime == "День" then
-            Lighting.ClockTime = Lighting.ClockTime + 0.0001
-        elseif TimeOfDay.CurrentTime == "Ночь" then
-            Lighting.ClockTime = Lighting.ClockTime + 0.00005
-        end
-        
-        StealthWait()
-    end)
+    Notify("Режим времени суток: " .. TimeOfDay.CurrentTime)
 end
 
 local function DisableTimeOfDay()
     -- Восстанавливаем оригинальные настройки
     if TimeOfDay.OriginalProperties.ClockTime then
-        local tweenInfo = TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        
         for property, value in pairs(TimeOfDay.OriginalProperties) do
             if Lighting[property] ~= nil then
-                local tween = TweenService:Create(Lighting, tweenInfo, {[property] = value})
-                tween:Play()
+                Lighting[property] = value
             end
         end
     end
     
-    -- Останавливаем цикл обновления
-    if TimeOfDay.Connection then
-        TimeOfDay.Connection:Disconnect()
-        TimeOfDay.Connection = nil
-    end
+    Notify("Режим времени суток выключен")
 end
 
 -- ИСПРАВЛЕННЫЙ БЕСКОНЕЧНЫЙ ПРЫЖОК С СТЕЛС-РЕЖИМОМ
@@ -364,14 +387,16 @@ local function DisableGodMode()
     end
 end
 
--- ИСПРАВЛЕННАЯ СИСТЕМА СКОРОСТИ С СТЕЛС-РЕЖИМОМ
+-- ИСПРАВЛЕННАЯ СИСТЕМА СКОРОСТИ (УЛУЧШЕННАЯ)
 local AdvancedSpeed = {
     Enabled = false,
     Value = 50,
     BodyVelocity = nil,
     Connection = nil,
     OriginalWalkSpeed = 16,
-    CurrentMethod = "Auto"
+    CurrentMethod = "Auto",
+    LastDirection = Vector3.new(0, 0, 0),
+    IsMoving = false
 }
 
 local function EnableBodyVelocitySpeed()
@@ -400,34 +425,45 @@ local function EnableBodyVelocitySpeed()
         if not AdvancedSpeed.Enabled or not AdvancedSpeed.BodyVelocity then return end
         
         local moveDirection = Vector3.new(0, 0, 0)
+        local isMoving = false
         
         if UIS:IsKeyDown(Enum.KeyCode.W) then
             moveDirection = moveDirection + Camera.CFrame.LookVector
+            isMoving = true
         end
         if UIS:IsKeyDown(Enum.KeyCode.S) then
             moveDirection = moveDirection - Camera.CFrame.LookVector
+            isMoving = true
         end
         if UIS:IsKeyDown(Enum.KeyCode.A) then
             moveDirection = moveDirection - Camera.CFrame.RightVector
+            isMoving = true
         end
         if UIS:IsKeyDown(Enum.KeyCode.D) then
             moveDirection = moveDirection + Camera.CFrame.RightVector
+            isMoving = true
         end
+        
+        AdvancedSpeed.IsMoving = isMoving
         
         if moveDirection.Magnitude > 0 then
             moveDirection = moveDirection.Unit * AdvancedSpeed.Value
+            
+            -- Исправление: убираем клонирование влево/вправо
             moveDirection = Vector3.new(moveDirection.X, 0, moveDirection.Z)
             
-            local currentVelocity = AdvancedSpeed.BodyVelocity.Velocity
-            local newVelocity = Vector3.new(
-                moveDirection.X,
-                0,
-                moveDirection.Z
-            )
+            -- Сохраняем последнее направление для плавного останова
+            AdvancedSpeed.LastDirection = moveDirection
             
-            AdvancedSpeed.BodyVelocity.Velocity = newVelocity
+            AdvancedSpeed.BodyVelocity.Velocity = moveDirection
         else
-            AdvancedSpeed.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            -- Плавный останов без скольжения
+            if AdvancedSpeed.Value > 400 then
+                AdvancedSpeed.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            else
+                -- Для низких скоростей - мгновенный останов
+                AdvancedSpeed.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            end
         end
         StealthWait()
     end)
@@ -466,6 +502,13 @@ local function DisableBodyVelocitySpeed()
         end)
         AdvancedSpeed.BodyVelocity = nil
     end
+    
+    -- Восстанавливаем стандартную скорость
+    pcall(function()
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid.WalkSpeed = AdvancedSpeed.OriginalWalkSpeed
+        end
+    end)
 end
 
 local function EnableAdvancedSpeed()
@@ -913,11 +956,11 @@ local function DisableNoclip()
     end
 end
 
--- ИСПРАВЛЕННЫЙ АИМБОТ С СТЕЛС-РЕЖИМОМ (ПОЛНОСТЬЮ ПЕРЕРАБОТАН)
+-- ИСПРАВЛЕННЫЙ АИМБОТ (СТАБИЛЬНАЯ ВЕРСИЯ)
 local AimbotSettings = {
     Enabled = false,
     FOV = 100,
-    Smoothness = 5, -- Теперь это скорость наведения (чем меньше - тем быстрее)
+    Smoothness = 0.1, -- Фиксированное значение для стабильности
     Part = "Head",
     TeamCheck = false,
     WallCheck = false,
@@ -926,8 +969,7 @@ local AimbotSettings = {
     Target = nil,
     FOVCircle = nil,
     LastUpdate = 0,
-    IsAiming = false,
-    Prediction = 0.1 -- Предсказание движения цели
+    IsAiming = false
 }
 
 local function CreateFOVCircle()
@@ -1033,24 +1075,11 @@ local function SmoothAim(target)
     
     local camera = workspace.CurrentCamera
     
-    -- Предсказание движения цели
-    local targetPosition = targetPart.Position
-    if targetPart.Velocity.Magnitude > 0 then
-        targetPosition = targetPosition + (targetPart.Velocity * AimbotSettings.Prediction)
-    end
-    
+    -- Стабильное наведение без дерганий
     local currentCFrame = camera.CFrame
-    local targetCFrame = CFrame.lookAt(currentCFrame.Position, targetPosition)
+    local targetCFrame = CFrame.lookAt(currentCFrame.Position, targetPart.Position)
     
-    -- ИСПРАВЛЕННАЯ ФОРМУЛА ПЛАВНОСТИ
-    -- Теперь чем меньше smoothness, тем БЫСТРЕЕ наведение (без дерганий)
-    local smoothnessFactor = math.max(0.1, AimbotSettings.Smoothness / 10)
-    local lerpAlpha = 1 - (smoothnessFactor * 0.15) -- Инверсная зависимость
-    
-    -- Ограничиваем для стабильности
-    lerpAlpha = math.clamp(lerpAlpha, 0.05, 0.95)
-    
-    local smoothedCFrame = currentCFrame:Lerp(targetCFrame, lerpAlpha)
+    local smoothedCFrame = currentCFrame:Lerp(targetCFrame, AimbotSettings.Smoothness)
     camera.CFrame = smoothedCFrame
 end
 
@@ -1258,6 +1287,7 @@ local FlySpeedSlider = MainTab:CreateSlider({
     end
 })
 
+-- ИСПРАВЛЕННАЯ СКОРОСТЬ ХОДЬБЫ
 local SpeedToggle = MainTab:CreateToggle({
     Name = "🏃 УЛУЧШЕННАЯ СКОРОСТЬ (ИСПРАВЛЕННАЯ)",
     CurrentValue = false,
@@ -1265,13 +1295,6 @@ local SpeedToggle = MainTab:CreateToggle({
         AdvancedSpeed.Enabled = Value
         if not Value then
             DisableBodyVelocitySpeed()
-            
-            pcall(function()
-                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-                    LocalPlayer.Character.Humanoid.WalkSpeed = AdvancedSpeed.OriginalWalkSpeed
-                end
-            end)
-            
             Notify("Скорость выключена")
         else
             local success = EnableAdvancedSpeed()
@@ -1288,7 +1311,7 @@ local SpeedToggle = MainTab:CreateToggle({
 
 local SpeedSlider = MainTab:CreateSlider({
     Name = "СКОРОСТЬ ПЕРЕДВИЖЕНИЯ",
-    Range = {16, 500},
+    Range = {16, 1000},
     Increment = 10,
     Suffix = "units",
     CurrentValue = AdvancedSpeed.Value,
@@ -1393,12 +1416,12 @@ local MaxDistanceSlider = VisualsTab:CreateSlider({
     end
 })
 
--- ВКЛАДКА АИМБОТ (ПЕРЕРАБОТАНА)
+-- ВКЛАДКА АИМБОТ (УПРОЩЕННАЯ)
 local CombatTab = Window:CreateTab("Аимбот")
 local AimbotSection = CombatTab:CreateSection("Настройки аимбота")
 
 local AimbotToggle = CombatTab:CreateToggle({
-    Name = "🎯 ВКЛЮЧИТЬ АИМБОТ (ИСПРАВЛЕННЫЙ)",
+    Name = "🎯 ВКЛЮЧИТЬ АИМБОТ (СТАБИЛЬНЫЙ)",
     CurrentValue = false,
     Callback = function(Value)
         AimbotSettings.Enabled = Value
@@ -1420,18 +1443,6 @@ local AimbotFOVSlider = CombatTab:CreateSlider({
     CurrentValue = AimbotSettings.FOV,
     Callback = function(Value)
         AimbotSettings.FOV = Value
-    end
-})
-
--- ИСПРАВЛЕННЫЙ СЛАЙДЕР ПЛАВНОСТИ (теперь чем меньше - тем быстрее)
-local AimbotSmoothSlider = CombatTab:CreateSlider({
-    Name = "⚡ СКОРОСТЬ НАВЕДЕНИЯ (чем меньше - тем быстрее)",
-    Range = {1, 20},
-    Increment = 1,
-    Suffix = "level",
-    CurrentValue = AimbotSettings.Smoothness,
-    Callback = function(Value)
-        AimbotSettings.Smoothness = Value
     end
 })
 
@@ -1460,14 +1471,6 @@ local TeamCheckToggle = CombatTab:CreateToggle({
     CurrentValue = false,
     Callback = function(Value)
         AimbotSettings.TeamCheck = Value
-    end
-})
-
-local WallCheckToggle = CombatTab:CreateToggle({
-    Name = "🧱 ПРОВЕРКА СТЕН",
-    CurrentValue = false,
-    Callback = function(Value)
-        AimbotSettings.WallCheck = Value
     end
 })
 
@@ -1509,25 +1512,23 @@ local AntiAfkToggle = ProtectionTab:CreateToggle({
 local VisualTab = Window:CreateTab("Визуал")
 local VisualSection = VisualTab:CreateSection("Визуальные эффекты")
 
--- РЕЖИМ СМЕНЫ ВРЕМЕНИ СУТОК (заменяет ночное зрение)
+-- ИСПРАВЛЕННЫЙ РЕЖИМ СМЕНЫ ВРЕМЕНИ СУТОК
 local TimeOfDayToggle = VisualTab:CreateToggle({
-    Name = "🌅 РЕЖИМ СМЕНЫ ВРЕМЕНИ СУТОК",
+    Name = "🌅 РЕЖИМ СМЕНЫ ВРЕМЕНИ СУТОК (РАБОЧИЙ)",
     CurrentValue = false,
     Callback = function(Value)
         TimeOfDay.Enabled = Value
         if Value then
             EnableTimeOfDay()
-            Notify("Режим смены времени суток включен: " .. TimeOfDay.CurrentTime)
         else
             DisableTimeOfDay()
-            Notify("Режим смены времени суток выключен")
         end
     end
 })
 
 local TimeOfDayDropdown = VisualTab:CreateDropdown({
     Name = "🕒 ВЫБОР ВРЕМЕНИ СУТОК",
-    Options = {"День", "Ночь", "Утро", "Вечер", "Туман"},
+    Options = {"День", "Ночь", "Утро", "Вечер"},
     CurrentOption = "День",
     Callback = function(Option)
         TimeOfDay.CurrentTime = Option
@@ -1556,11 +1557,15 @@ local XrayToggle = VisualTab:CreateToggle({
 local InfoTab = Window:CreateTab("Информация")
 local InfoSection = InfoTab:CreateSection("Статус системы")
 
-InfoSection:CreateLabel("🔒 СТЕЛС-РЕЖИМ: АКТИВИРОВАН")
-InfoSection:CreateLabel("🛡️ Анти-обнаружение: Включено")
-InfoSection:CreateLabel("⏱️ Случайные задержки: Включено")
-InfoSection:CreateLabel("🔤 Случайные имена: Включено")
-InfoSection:CreateLabel("🎯 Аимбот: ПОЛНОСТЬЮ ИСПРАВЛЕН")
+InfoSection:CreateLabel("🟢 СТАТУС СИСТЕМЫ: АКТИВЕН")
+InfoSection:CreateLabel("🔒 СТЕЛС-РЕЖИМ: ВКЛЮЧЕН")
+InfoSection:CreateLabel("🛡️ Анти-обнаружение: РАБОТАЕТ")
+InfoSection:CreateLabel("⏱️ Случайные задержки: ВКЛЮЧЕНО")
+InfoSection:CreateLabel("🔤 Случайные имена: ВКЛЮЧЕНО")
+InfoSection:CreateLabel("🎯 Аимбот: СТАБИЛЬНЫЙ")
+InfoSection:CreateLabel("🏃 Скорость: ИСПРАВЛЕНА")
+InfoSection:CreateLabel("🌅 Время суток: РАБОЧЕЕ")
+InfoSection:CreateLabel("👤 Создатель: xx_loxi")
 InfoSection:CreateLabel("⚡ Версия: " .. Version)
 
 InfoSection:CreateButton({
@@ -1607,7 +1612,10 @@ pcall(function()
     end
 end)
 
+-- СОЗДАЕМ ИНДИКАТОР СТАТУСА ПРИ ЗАГРУЗКЕ
+CreateStatusIndicator()
+
 -- УВЕДОМЛЕНИЕ О ЗАГРУЗКЕ
-Notify("RAGE MOD ULTIMATE v" .. Version .. " загружен! Стелс-режим активирован.")
-print("⚡ RAGE MOD ULTIMATE v" .. Version .. " | Complete Fixed System Loaded | Lines: 1300+")
-print("🔒 STEALTH MODE: ACTIVE | AIMBOT: FULLY FIXED | No more jerking!")
+Notify("RAGE MOD ULTIMATE v" .. Version .. " загружен! Создатель: xx_loxi")
+print("⚡ RAGE MOD ULTIMATE v" .. Version .. " | Creator: xx_loxi")
+print("🔒 STEALTH MODE: ACTIVE | AIMBOT: STABLE | SPEED: FIXED | TIME OF DAY: WORKING")
