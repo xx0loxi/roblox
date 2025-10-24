@@ -93,109 +93,106 @@ local function StealthWait()
     end
 end
 
--- ИСПРАВЛЕННЫЙ РЕЖИМ СМЕНЫ ВРЕМЕНИ СУТОК
-local TimeOfDay = {
+-- СИСТЕМА ПОЛНОЙ НЕВИДИМОСТИ
+local Invisibility = {
     Enabled = false,
-    CurrentTime = "День",
     OriginalProperties = {},
     Connection = nil
 }
 
--- Настройки для разных времен суток
-local TimePresets = {
-    ["День"] = {
-        ClockTime = 14,
-        Brightness = 2,
-        Ambient = Color3.fromRGB(255, 255, 255),
-        OutdoorAmbient = Color3.fromRGB(128, 128, 128),
-        FogColor = Color3.fromRGB(191, 191, 191),
-        FogEnd = 100000,
-        GlobalShadows = true,
-        ColorShift_Top = Color3.fromRGB(255, 255, 255),
-        ExposureCompensation = 0
-    },
-    ["Ночь"] = {
-        ClockTime = 0,
-        Brightness = 0.1,
-        Ambient = Color3.fromRGB(50, 50, 100),
-        OutdoorAmbient = Color3.fromRGB(50, 50, 100),
-        FogColor = Color3.fromRGB(30, 30, 60),
-        FogEnd = 500,
-        GlobalShadows = false,
-        ColorShift_Top = Color3.fromRGB(100, 100, 150),
-        ExposureCompensation = 1
-    },
-    ["Утро"] = {
-        ClockTime = 6,
-        Brightness = 1.5,
-        Ambient = Color3.fromRGB(255, 200, 150),
-        OutdoorAmbient = Color3.fromRGB(150, 150, 200),
-        FogColor = Color3.fromRGB(200, 180, 150),
-        FogEnd = 2000,
-        GlobalShadows = true,
-        ColorShift_Top = Color3.fromRGB(255, 220, 180),
-        ExposureCompensation = 0.3
-    },
-    ["Вечер"] = {
-        ClockTime = 18,
-        Brightness = 0.8,
-        Ambient = Color3.fromRGB(255, 150, 100),
-        OutdoorAmbient = Color3.fromRGB(200, 150, 100),
-        FogColor = Color3.fromRGB(150, 100, 50),
-        FogEnd = 1000,
-        GlobalShadows = true,
-        ColorShift_Top = Color3.fromRGB(255, 180, 120),
-        ExposureCompensation = 0.5
-    }
-}
-
-local function ApplyTimeOfDay()
-    if not TimeOfDay.Enabled then return end
+local function EnableInvisibility()
+    if Invisibility.Connection then
+        Invisibility.Connection:Disconnect()
+    end
     
-    local preset = TimePresets[TimeOfDay.CurrentTime]
-    if not preset then return end
+    local character = LocalPlayer.Character
+    if not character then
+        Notify("Персонаж не найден")
+        return
+    end
     
-    -- Немедленное применение изменений
-    for property, value in pairs(preset) do
-        if Lighting[property] ~= nil then
-            Lighting[property] = value
+    -- Сохраняем оригинальные свойства всех частей
+    Invisibility.OriginalProperties = {}
+    
+    for _, part in pairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            Invisibility.OriginalProperties[part] = {
+                Transparency = part.Transparency,
+                CanCollide = part.CanCollide,
+                Material = part.Material,
+                Color = part.Color
+            }
+            
+            -- Делаем часть полностью невидимой и неколлизионной
+            part.Transparency = 1
+            part.CanCollide = false
+            part.Material = Enum.Material.Glass
+        elseif part:IsA("Decal") or part:IsA("Texture") then
+            Invisibility.OriginalProperties[part] = {
+                Transparency = part.Transparency
+            }
+            part.Transparency = 1
         end
     end
-end
-
-local function EnableTimeOfDay()
-    -- Сохраняем оригинальные настройки освещения только при первом включении
-    if not next(TimeOfDay.OriginalProperties) then
-        TimeOfDay.OriginalProperties = {
-            ClockTime = Lighting.ClockTime,
-            Brightness = Lighting.Brightness,
-            Ambient = Lighting.Ambient,
-            OutdoorAmbient = Lighting.OutdoorAmbient,
-            FogColor = Lighting.FogColor,
-            FogEnd = Lighting.FogEnd,
-            GlobalShadows = Lighting.GlobalShadows,
-            ColorShift_Top = Lighting.ColorShift_Top,
-            ExposureCompensation = Lighting.ExposureCompensation
-        }
-    end
     
-    -- Немедленно применяем выбранное время суток
-    ApplyTimeOfDay()
-    
-    Notify("Режим времени суток: " .. TimeOfDay.CurrentTime)
-end
-
-local function DisableTimeOfDay()
-    -- Восстанавливаем оригинальные настройки
-    if next(TimeOfDay.OriginalProperties) then
-        for property, value in pairs(TimeOfDay.OriginalProperties) do
-            if Lighting[property] ~= nil then
-                Lighting[property] = value
+    -- Скрываем оружие и инструменты
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    if backpack then
+        for _, tool in pairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") then
+                Invisibility.OriginalProperties[tool] = {Handle = {}}
+                local handle = tool:FindFirstChild("Handle")
+                if handle and handle:IsA("BasePart") then
+                    Invisibility.OriginalProperties[tool].Handle = {
+                        Transparency = handle.Transparency,
+                        CanCollide = handle.CanCollide
+                    }
+                    handle.Transparency = 1
+                    handle.CanCollide = false
+                end
             end
         end
     end
     
-    Notify("Режим времени суток выключен")
+    -- Обработчик для нового инструмента
+    Invisibility.Connection = LocalPlayer.CharacterAdded:Connect(function(newCharacter)
+        if Invisibility.Enabled then
+            wait(1) -- Ждем загрузки персонажа
+            EnableInvisibility()
+        end
+    end)
+    
+    Notify("⚡ ПОЛНАЯ НЕВИДИМОСТЬ АКТИВИРОВАНА!")
+end
+
+local function DisableInvisibility()
+    if Invisibility.Connection then
+        Invisibility.Connection:Disconnect()
+        Invisibility.Connection = nil
+    end
+    
+    -- Восстанавливаем оригинальные свойства
+    for object, properties in pairs(Invisibility.OriginalProperties) do
+        if object and object.Parent then
+            if object:IsA("BasePart") then
+                object.Transparency = properties.Transparency or 0
+                object.CanCollide = properties.CanCollide or true
+                object.Material = properties.Material or Enum.Material.Plastic
+                object.Color = properties.Color or Color3.new(1, 1, 1)
+            elseif object:IsA("Decal") or object:IsA("Texture") then
+                object.Transparency = properties.Transparency or 0
+            elseif object:IsA("Tool") then
+                local handle = object:FindFirstChild("Handle")
+                if handle and handle:IsA("BasePart") and properties.Handle then
+                    handle.Transparency = properties.Handle.Transparency or 0
+                    handle.CanCollide = properties.Handle.CanCollide or true
+                end
+            end
+        end
+    end
+    
+    Invisibility.OriginalProperties = {}
+    Notify("Невидимость отключена - персонаж восстановлен")
 end
 
 -- ИСПРАВЛЕННЫЙ БЕСКОНЕЧНЫЙ ПРЫЖОК С СТЕЛС-РЕЖИМОМ
@@ -1127,44 +1124,6 @@ local function StopAimbot()
     AimbotSettings.IsAiming = false
 end
 
--- ИСПРАВЛЕННЫЙ XRAY СИСТЕМА С СТЕЛС-РЕЖИМОМ
-local XraySettings = {
-    Enabled = false,
-    OriginalProperties = {}
-}
-
-local function EnableXray()
-    XraySettings.OriginalProperties = {}
-    
-    for _, part in pairs(Workspace:GetDescendants()) do
-        if part:IsA("BasePart") and part.Transparency < 0.5 then
-            XraySettings.OriginalProperties[part] = {
-                Transparency = part.Transparency,
-                Material = part.Material,
-                Color = part.Color,
-                Reflectance = part.Reflectance
-            }
-            
-            part.Transparency = 0.7
-            part.Material = Enum.Material.ForceField
-            part.Color = Color3.fromRGB(100, 100, 255)
-            part.Reflectance = 0.1
-        end
-    end
-end
-
-local function DisableXray()
-    for part, properties in pairs(XraySettings.OriginalProperties) do
-        if part and part.Parent then
-            part.Transparency = properties.Transparency
-            part.Material = properties.Material
-            part.Color = properties.Color
-            part.Reflectance = properties.Reflectance
-        end
-    end
-    XraySettings.OriginalProperties = {}
-end
-
 -- ANTI-AFK СИСТЕМА С СТЕЛС-РЕЖИМОМ
 local AntiAfkSettings = {
     Enabled = false,
@@ -1408,7 +1367,7 @@ local CombatTab = Window:CreateTab("Аимбот")
 local AimbotSection = CombatTab:CreateSection("Настройки аимбота")
 
 local AimbotToggle = CombatTab:CreateToggle({
-    Name = "🎯 ВКЛЮЧИТЬ АИМБОТ (БЫСТРЫЙ)",
+    Name = "🎯 ВКЛЮЧИТЬ АИМБОТ",
     CurrentValue = false,
     Callback = function(Value)
         AimbotSettings.Enabled = Value
@@ -1499,43 +1458,16 @@ local AntiAfkToggle = ProtectionTab:CreateToggle({
 local VisualTab = Window:CreateTab("Визуал")
 local VisualSection = VisualTab:CreateSection("Визуальные эффекты")
 
--- ИСПРАВЛЕННЫЙ РЕЖИМ СМЕНЫ ВРЕМЕНИ СУТОК
-local TimeOfDayToggle = VisualTab:CreateToggle({
-    Name = "🌅 РЕЖИМ СМЕНЫ ВРЕМЕНИ СУТОК (РАБОЧИЙ)",
+-- ФУНКЦИЯ ПОЛНОЙ НЕВИДИМОСТИ
+local InvisibilityToggle = VisualTab:CreateToggle({
+    Name = "👻НЕВИДИМОСТЬ",
     CurrentValue = false,
     Callback = function(Value)
-        TimeOfDay.Enabled = Value
+        Invisibility.Enabled = Value
         if Value then
-            EnableTimeOfDay()
+            EnableInvisibility()
         else
-            DisableTimeOfDay()
-        end
-    end
-})
-
-local TimeOfDayDropdown = VisualTab:CreateDropdown({
-    Name = "🕒 ВЫБОР ВРЕМЕНИ СУТОК",
-    Options = {"День", "Ночь", "Утро", "Вечер"},
-    CurrentOption = "День",
-    Callback = function(Option)
-        TimeOfDay.CurrentTime = Option
-        if TimeOfDay.Enabled then
-            ApplyTimeOfDay()
-            Notify("Время суток изменено на: " .. Option)
-        end
-    end
-})
-
-local XrayToggle = VisualTab:CreateToggle({
-    Name = "👁️ XRAY (ИСПРАВЛЕННЫЙ)",
-    CurrentValue = false,
-    Callback = function(Value)
-        if Value then
-            EnableXray()
-            Notify("XRAY включен - Текстуры сохраняются")
-        else
-            DisableXray()
-            Notify("XRAY выключен - Текстуры восстановлены")
+            DisableInvisibility()
         end
     end
 })
@@ -1551,7 +1483,7 @@ InfoSection:CreateLabel("⏱️ Случайные задержки: ВКЛЮЧ�
 InfoSection:CreateLabel("🔤 Случайные имена: ВКЛЮЧЕНО")
 InfoSection:CreateLabel("🎯 Аимбот: БЫСТРЫЙ")
 InfoSection:CreateLabel("🏃 Скорость: ИСПРАВЛЕНА")
-InfoSection:CreateLabel("🌅 Время суток: РАБОЧЕЕ")
+InfoSection:CreateLabel("👻 Невидимость: ДОСТУПНА")
 InfoSection:CreateLabel("👤 Создатель: xx_loxi")
 InfoSection:CreateLabel("⚡ Версия: " .. Version)
 
@@ -1605,4 +1537,4 @@ CreateStatusIndicator()
 -- УВЕДОМЛЕНИЕ О ЗАГРУЗКЕ
 Notify("RAGE MOD ULTIMATE v" .. Version .. " загружен! Создатель: xx_loxi")
 print("⚡ RAGE MOD ULTIMATE v" .. Version .. " | Creator: xx_loxi")
-print("🔒 STEALTH MODE: ACTIVE | AIMBOT: FAST | SPEED: FIXED | TIME OF DAY: WORKING")
+print("🔒 STEALTH MODE: ACTIVE | AIMBOT: FAST | INVISIBILITY: ADDED")
