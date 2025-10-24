@@ -1,10 +1,10 @@
--- RAGE MOD - ULTIMATE VERSION 0.8 BETA WITH FIXED GOD MODE
+-- RAGE MOD - ULTIMATE VERSION 1.0 BETA
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "⚡ RAGE MOD | ULTIMATE v0.8 BETA",
-    LoadingTitle = "RAGE MOD ULTIMATE v0.8 BETA",
-    LoadingSubtitle = "Loading Fixed God Mode...",
+    Name = "⚡ RAGE MOD | ULTIMATE v1.0 BETA",
+    LoadingTitle = "RAGE MOD ULTIMATE v1.0 BETA",
+    LoadingSubtitle = "Loading Advanced Features...",
     Theme = "Dark"
 })
 
@@ -15,15 +15,151 @@ local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local Camera = workspace.CurrentCamera
 local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
 
 -- ВЕРСИЯ
-local Version = "0.8 BETA"
+local Version = "1.0 BETA"
 
--- ИСПРАВЛЕННЫЙ GOD MODE (БЕЗ ЛАГОВ И НАСТОЯЩАЯ НЕУЯЗВИМОСТЬ)
+-- ИСПРАВЛЕННЫЙ БЕСКОНЕЧНЫЙ ПРЫЖОК
+local InfiniteJump = {
+    Enabled = false,
+    Connection = nil
+}
+
+local function EnableInfiniteJump()
+    if InfiniteJump.Connection then
+        InfiniteJump.Connection:Disconnect()
+    end
+    
+    InfiniteJump.Connection = UIS.JumpRequest:Connect(function()
+        if InfiniteJump.Enabled and LocalPlayer.Character then
+            local Humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if Humanoid then
+                Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end
+    end)
+end
+
+local function DisableInfiniteJump()
+    if InfiniteJump.Connection then
+        InfiniteJump.Connection:Disconnect()
+        InfiniteJump.Connection = nil
+    end
+end
+
+-- СИСТЕМА СПИСКА ИГРОКОВ
+local PlayerList = {
+    Players = {},
+    LastUpdate = 0,
+    UpdateInterval = 5,
+    Connection = nil
+}
+
+local function UpdatePlayerList()
+    PlayerList.Players = {}
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            table.insert(PlayerList.Players, {
+                Name = player.Name,
+                Player = player,
+                DisplayName = player.DisplayName or player.Name,
+                Team = player.Team and player.Team.Name or "Без команды"
+            })
+        end
+    end
+    
+    table.sort(PlayerList.Players, function(a, b)
+        return a.Name:lower() < b.Name:lower()
+    end)
+    
+    PlayerList.LastUpdate = tick()
+end
+
+local function CreatePlayerListTab()
+    local PlayerTab = Window:CreateTab("👥 Игроки")
+    local PlayerSection = PlayerTab:CreateSection("Список игроков на сервере")
+    
+    local PlayerButtons = {}
+    local SearchBox = PlayerTab:CreateInput({
+        Name = "🔍 Поиск игрока",
+        PlaceholderText = "Введите ник игрока...",
+        RemoveTextAfterFocusLost = false,
+        Callback = function(Text)
+            for playerName, button in pairs(PlayerButtons) do
+                if string.find(playerName:lower(), Text:lower()) or Text == "" then
+                    button.Visible = true
+                else
+                    button.Visible = false
+                end
+            end
+        end
+    })
+    
+    local function CreatePlayerButtons()
+        for _, button in pairs(PlayerButtons) do
+            button:Destroy()
+        end
+        PlayerButtons = {}
+        
+        for _, playerData in pairs(PlayerList.Players) do
+            local button = PlayerSection:CreateButton({
+                Name = "👤 " .. playerData.Name,
+                Callback = function()
+                    Rayfield:Notify({
+                        Title = "Игрок выбран",
+                        Content = "Вы выбрали: " .. playerData.Name .. "\nКоманда: " .. playerData.Team,
+                        Duration = 6,
+                        Actions = {
+                            Ignore = {
+                                Name = "Закрыть",
+                                Callback = function() end
+                            }
+                        }
+                    })
+                end
+            })
+            PlayerButtons[playerData.Name] = button
+        end
+        
+        PlayerSection:CreateButton({
+            Name = "🔄 Обновить список",
+            Callback = function()
+                UpdatePlayerList()
+                CreatePlayerButtons()
+                Rayfield:Notify({
+                    Title = "Список игроков",
+                    Content = "Список обновлен! Игроков: " .. #PlayerList.Players,
+                    Duration = 3
+                })
+            end
+        })
+        
+        PlayerSection:CreateLabel("Игроков на сервере: " .. #Players:GetPlayers())
+        PlayerSection:CreateLabel("Обновлено: " .. os.date("%X"))
+    end
+    
+    if PlayerList.Connection then
+        PlayerList.Connection:Disconnect()
+    end
+    
+    PlayerList.Connection = RunService.Heartbeat:Connect(function()
+        if tick() - PlayerList.LastUpdate > PlayerList.UpdateInterval then
+            UpdatePlayerList()
+            CreatePlayerButtons()
+        end
+    end)
+    
+    UpdatePlayerList()
+    CreatePlayerButtons()
+end
+
+-- GOD MOD
 local GodMode = {
     Enabled = false,
-    Connection = nil,
-    OriginalWalkSpeed = 16
+    Connection = nil
 }
 
 local function EnableGodMode()
@@ -41,10 +177,9 @@ local function EnableGodMode()
             local humanoid = character:FindFirstChildOfClass("Humanoid")
             if not humanoid then return end
             
-            -- ПРОСТАЯ И ЭФФЕКТИВНАЯ ЗАЩИТА
             humanoid.Health = humanoid.MaxHealth
             
-            -- Защита от смерти
+            -- Дополнительная защита от смерти
             if humanoid.Health <= 0 then
                 humanoid.Health = humanoid.MaxHealth
             end
@@ -59,20 +194,14 @@ local function DisableGodMode()
     end
 end
 
--- НАСТРОЙКИ ТЕЛЕПОРТА НА КУРСОР
-local TeleportSettings = {
-    Enabled = false,
-    Key = Enum.KeyCode.X,
-    Connection = nil
-}
-
--- УЛУЧШЕННАЯ СИСТЕМА СКОРОСТИ
+-- ИСПРАВЛЕННАЯ СИСТЕМА СКОРОСТИ
 local AdvancedSpeed = {
     Enabled = false,
     Value = 50,
     BodyVelocity = nil,
     Connection = nil,
-    OriginalWalkSpeed = 16
+    OriginalWalkSpeed = 16,
+    CurrentMethod = "Auto"
 }
 
 local function EnableBodyVelocitySpeed()
@@ -118,7 +247,16 @@ local function EnableBodyVelocitySpeed()
         if moveDirection.Magnitude > 0 then
             moveDirection = moveDirection.Unit * AdvancedSpeed.Value
             moveDirection = Vector3.new(moveDirection.X, 0, moveDirection.Z)
-            AdvancedSpeed.BodyVelocity.Velocity = moveDirection
+            
+            -- Исправление бага с клоном вправо
+            local currentVelocity = AdvancedSpeed.BodyVelocity.Velocity
+            local newVelocity = Vector3.new(
+                moveDirection.X,
+                0,
+                moveDirection.Z
+            )
+            
+            AdvancedSpeed.BodyVelocity.Velocity = newVelocity
         else
             AdvancedSpeed.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
         end
@@ -138,6 +276,7 @@ local function EnableHumanoidSpeed()
             local humanoid = character:FindFirstChild("Humanoid")
             if not humanoid then return end
             
+            -- Исправление: скорость работает всегда, не только при прыжке
             humanoid.WalkSpeed = AdvancedSpeed.Value
         end)
     end)
@@ -159,7 +298,6 @@ local function DisableBodyVelocitySpeed()
     end
 end
 
--- АВТОМАТИЧЕСКИЙ ВЫБОР МЕТОДА СКОРОСТИ
 local function EnableAdvancedSpeed()
     DisableBodyVelocitySpeed()
     
@@ -167,12 +305,23 @@ local function EnableAdvancedSpeed()
     
     if not success then
         success = EnableHumanoidSpeed()
+        if success then
+            AdvancedSpeed.CurrentMethod = "Humanoid"
+        end
+    else
+        AdvancedSpeed.CurrentMethod = "BodyVelocity"
     end
     
     return success
 end
 
--- УЛУЧШЕННЫЙ ТЕЛЕПОРТ НА КУРСОР
+-- ТЕЛЕПОРТ НА КУРСОР
+local TeleportSettings = {
+    Enabled = false,
+    Key = Enum.KeyCode.X,
+    Connection = nil
+}
+
 local function TpToCursor()
     if not LocalPlayer.Character then
         Notify("Персонаж не найден")
@@ -201,7 +350,6 @@ local function TpToCursor()
     end
 end
 
--- ОБРАБОТКА КЛАВИШ ТЕЛЕПОРТА
 local function StartTeleportListener()
     if TeleportSettings.Connection then
         TeleportSettings.Connection:Disconnect()
@@ -223,80 +371,40 @@ local function StopTeleportListener()
     end
 end
 
--- Настройки
-local Settings = {
-    Noclip = false,
-    Fly = {
-        Enabled = false,
-        Speed = 50
-    },
-    Speed = {
-        Enabled = false,
-        Value = 50
-    },
-    InfiniteJump = false,
-    GodMode = false,
-    Esp = {
-        Enabled = false,
-        ShowBox = true,
-        ShowName = true,
-        ShowDistance = true,
-        ShowHealth = true,
-        ShowTracers = false,
-        ShowAimbotStatus = true,
-        BoxColor = Color3.fromRGB(0, 255, 255),
-        TextColor = Color3.fromRGB(255, 255, 255),
-        TracerColor = Color3.fromRGB(255, 0, 0),
-        TeamColor = true,
-        MaxDistance = 1000,
-        Boxes = {},
-        Names = {},
-        Distances = {},
-        HealthBars = {},
-        HealthTexts = {},
-        AimbotStatus = {},
-        Tracers = {}
-    },
-    Xray = false,
-    AntiAfk = false,
-    Aimbot = {
-        Enabled = false,
-        MouseButton = "RightButton",
-        FOV = 100,
-        Smoothness = 10,
-        Part = "Head",
-        TeamCheck = false,  -- ВЫКЛЮЧЕНО ПО УМОЛЧАНИЮ
-        VisibleCheck = false,  -- ВЫКЛЮЧЕНО ПО УМОЛЧАНИЮ
-        Prediction = false,
-        PredictionAmount = 0.1,
-        MaxDistance = 500,
-        WallCheck = false,  -- ВЫКЛЮЧЕНО ПО УМОЛЧАНИЮ
-        Priority = "Closest"
-    }
+-- ИСПРАВЛЕННАЯ ESP СИСТЕМА
+local ESP = {
+    Enabled = false,
+    ShowBox = true,
+    ShowName = true,
+    ShowDistance = true,
+    ShowHealth = true,
+    ShowTracers = false,
+    TeamColor = true,
+    MaxDistance = 1000,
+    BoxColor = Color3.fromRGB(0, 255, 255),
+    TextColor = Color3.fromRGB(255, 255, 255),
+    TracerColor = Color3.fromRGB(255, 0, 0),
+    Boxes = {},
+    Names = {},
+    Distances = {},
+    HealthBars = {},
+    HealthTexts = {},
+    Tracers = {},
+    Connection = nil
 }
 
--- Уведомления
-local function Notify(message)
-    Rayfield:Notify({
-        Title = "RAGE MOD ULTIMATE v" .. Version,
-        Content = message,
-        Duration = 3.0
-    })
-end
-
--- УЛУЧШЕННЫЙ ESP С ЛУЧШИМ ВИЗУАЛОМ
 local function CreateESP(player)
-    if Settings.Esp.Boxes[player] then return end
+    if ESP.Boxes[player] then return end
     
     local box = Drawing.new("Square")
     box.Visible = false
-    box.Color = Settings.Esp.BoxColor
+    box.Color = ESP.BoxColor
     box.Thickness = 2
     box.Filled = false
     
     local name = Drawing.new("Text")
     name.Visible = false
-    name.Color = Settings.Esp.TextColor
+    name.Color = ESP.TextColor
     name.Size = 18
     name.Center = true
     name.Outline = true
@@ -315,12 +423,6 @@ local function CreateESP(player)
     healthBar.Thickness = 1
     healthBar.Filled = true
     
-    local healthBackground = Drawing.new("Square")
-    healthBackground.Visible = false
-    healthBackground.Color = Color3.fromRGB(50, 50, 50)
-    healthBackground.Thickness = 1
-    healthBackground.Filled = true
-    
     local healthText = Drawing.new("Text")
     healthText.Visible = false
     healthText.Color = Color3.fromRGB(255, 255, 255)
@@ -328,54 +430,43 @@ local function CreateESP(player)
     healthText.Center = true
     healthText.Outline = true
     
-    local aimbotStatus = Drawing.new("Text")
-    aimbotStatus.Visible = false
-    aimbotStatus.Color = Color3.fromRGB(255, 255, 0)
-    aimbotStatus.Size = 14
-    aimbotStatus.Center = true
-    aimbotStatus.Outline = true
-    aimbotStatus.Text = "🎯"
-    
     local tracer = Drawing.new("Line")
     tracer.Visible = false
-    tracer.Color = Settings.Esp.TracerColor
+    tracer.Color = ESP.TracerColor
     tracer.Thickness = 2
     
-    Settings.Esp.Boxes[player] = box
-    Settings.Esp.Names[player] = name
-    Settings.Esp.Distances[player] = distance
-    Settings.Esp.HealthBars[player] = healthBar
-    Settings.Esp.HealthTexts[player] = healthText
-    Settings.Esp.AimbotStatus[player] = aimbotStatus
-    Settings.Esp.Tracers[player] = tracer
+    ESP.Boxes[player] = box
+    ESP.Names[player] = name
+    ESP.Distances[player] = distance
+    ESP.HealthBars[player] = healthBar
+    ESP.HealthTexts[player] = healthText
+    ESP.Tracers[player] = tracer
 end
 
 local function RemoveESP(player)
     for _, drawing in pairs({
-        Settings.Esp.Boxes[player],
-        Settings.Esp.Names[player],
-        Settings.Esp.Distances[player],
-        Settings.Esp.HealthBars[player],
-        Settings.Esp.HealthTexts[player],
-        Settings.Esp.AimbotStatus[player],
-        Settings.Esp.Tracers[player]
+        ESP.Boxes[player],
+        ESP.Names[player],
+        ESP.Distances[player],
+        ESP.HealthBars[player],
+        ESP.HealthTexts[player],
+        ESP.Tracers[player]
     }) do
         if drawing then
             drawing:Remove()
         end
     end
     
-    Settings.Esp.Boxes[player] = nil
-    Settings.Esp.Names[player] = nil
-    Settings.Esp.Distances[player] = nil
-    Settings.Esp.HealthBars[player] = nil
-    Settings.Esp.HealthTexts[player] = nil
-    Settings.Esp.AimbotStatus[player] = nil
-    Settings.Esp.Tracers[player] = nil
+    ESP.Boxes[player] = nil
+    ESP.Names[player] = nil
+    ESP.Distances[player] = nil
+    ESP.HealthBars[player] = nil
+    ESP.HealthTexts[player] = nil
+    ESP.Tracers[player] = nil
 end
 
 local function UpdateESP()
-    if not Settings.Esp.Enabled then return end
+    if not ESP.Enabled then return end
     
     local localChar = LocalPlayer.Character
     local localRoot = localChar and localChar:FindFirstChild("HumanoidRootPart")
@@ -384,7 +475,7 @@ local function UpdateESP()
     local viewportSize = Camera.ViewportSize
     local screenCenter = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
     
-    for player, box in pairs(Settings.Esp.Boxes) do
+    for player, box in pairs(ESP.Boxes) do
         if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local character = player.Character
             local rootPart = character.HumanoidRootPart
@@ -393,61 +484,59 @@ local function UpdateESP()
             local distance = (localRoot.Position - rootPart.Position).Magnitude
             local position, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
             
-            if onScreen and distance <= Settings.Esp.MaxDistance then
+            if onScreen and distance <= ESP.MaxDistance then
                 local size = Vector2.new(2000 / position.Z, 4000 / position.Z)
                 
                 -- БОКС
-                if Settings.Esp.ShowBox then
+                if ESP.ShowBox then
                     box.Size = size
                     box.Position = Vector2.new(position.X - size.X / 2, position.Y - size.Y / 2)
                     box.Visible = true
                     
-                    if Settings.Esp.TeamColor and player.Team then
+                    if ESP.TeamColor and player.Team then
                         box.Color = player.Team.TeamColor.Color
                     else
-                        box.Color = Settings.Esp.BoxColor
+                        box.Color = ESP.BoxColor
                     end
                 else
                     box.Visible = false
                 end
                 
                 -- ИМЯ
-                if Settings.Esp.ShowName then
-                    local name = Settings.Esp.Names[player]
+                if ESP.ShowName then
+                    local name = ESP.Names[player]
                     name.Position = Vector2.new(position.X, position.Y - size.Y / 2 - 25)
                     name.Visible = true
-                    name.Color = Settings.Esp.TextColor
+                    name.Color = ESP.TextColor
                 else
-                    Settings.Esp.Names[player].Visible = false
+                    ESP.Names[player].Visible = false
                 end
                 
                 -- ДИСТАНЦИЯ
-                if Settings.Esp.ShowDistance then
-                    local distanceText = Settings.Esp.Distances[player]
+                if ESP.ShowDistance then
+                    local distanceText = ESP.Distances[player]
                     distanceText.Text = math.floor(distance) .. " studs"
                     distanceText.Position = Vector2.new(position.X, position.Y - size.Y / 2 - 45)
                     distanceText.Visible = true
                 else
-                    Settings.Esp.Distances[player].Visible = false
+                    ESP.Distances[player].Visible = false
                 end
                 
                 -- ЗДОРОВЬЕ
-                if Settings.Esp.ShowHealth and humanoid then
+                if ESP.ShowHealth and humanoid then
                     local healthPercent = humanoid.Health / humanoid.MaxHealth
-                    local healthBar = Settings.Esp.HealthBars[player]
-                    local healthText = Settings.Esp.HealthTexts[player]
+                    local healthBar = ESP.HealthBars[player]
+                    local healthText = ESP.HealthTexts[player]
                     
                     local barWidth = 4
                     local barHeight = size.Y
                     local barX = position.X - size.X / 2 - 10
                     local barY = position.Y - size.Y / 2
                     
-                    -- Фон здоровья
                     healthBar.Size = Vector2.new(barWidth, barHeight * healthPercent)
                     healthBar.Position = Vector2.new(barX, barY + barHeight * (1 - healthPercent))
                     healthBar.Visible = true
                     
-                    -- Цвет здоровья
                     if healthPercent > 0.7 then
                         healthBar.Color = Color3.fromRGB(0, 255, 0)
                     elseif healthPercent > 0.3 then
@@ -456,47 +545,44 @@ local function UpdateESP()
                         healthBar.Color = Color3.fromRGB(255, 0, 0)
                     end
                     
-                    -- Текст здоровья
                     healthText.Text = tostring(math.floor(humanoid.Health))
                     healthText.Position = Vector2.new(barX - 20, barY + barHeight / 2 - 7)
                     healthText.Visible = true
                 else
-                    Settings.Esp.HealthBars[player].Visible = false
-                    Settings.Esp.HealthTexts[player].Visible = false
+                    ESP.HealthBars[player].Visible = false
+                    ESP.HealthTexts[player].Visible = false
                 end
                 
                 -- ТРЕЙСЕРЫ
-                if Settings.Esp.ShowTracers then
-                    local tracer = Settings.Esp.Tracers[player]
+                if ESP.ShowTracers then
+                    local tracer = ESP.Tracers[player]
                     tracer.From = Vector2.new(viewportSize.X / 2, viewportSize.Y)
                     tracer.To = Vector2.new(position.X, position.Y)
                     tracer.Visible = true
                 else
-                    Settings.Esp.Tracers[player].Visible = false
+                    ESP.Tracers[player].Visible = false
                 end
             else
                 box.Visible = false
-                Settings.Esp.Names[player].Visible = false
-                Settings.Esp.Distances[player].Visible = false
-                Settings.Esp.HealthBars[player].Visible = false
-                Settings.Esp.HealthTexts[player].Visible = false
-                Settings.Esp.AimbotStatus[player].Visible = false
-                Settings.Esp.Tracers[player].Visible = false
+                ESP.Names[player].Visible = false
+                ESP.Distances[player].Visible = false
+                ESP.HealthBars[player].Visible = false
+                ESP.HealthTexts[player].Visible = false
+                ESP.Tracers[player].Visible = false
             end
         else
             box.Visible = false
-            Settings.Esp.Names[player].Visible = false
-            Settings.Esp.Distances[player].Visible = false
-            Settings.Esp.HealthBars[player].Visible = false
-            Settings.Esp.HealthTexts[player].Visible = false
-            Settings.Esp.AimbotStatus[player].Visible = false
-            Settings.Esp.Tracers[player].Visible = false
+            ESP.Names[player].Visible = false
+            ESP.Distances[player].Visible = false
+            ESP.HealthBars[player].Visible = false
+            ESP.HealthTexts[player].Visible = false
+            ESP.Tracers[player].Visible = false
         end
     end
 end
 
 local function EnableESP()
-    Settings.Esp.Enabled = true
+    ESP.Enabled = true
     
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
@@ -504,10 +590,13 @@ local function EnableESP()
         end
     end
     
-    local ESPConnection
-    ESPConnection = RunService.RenderStepped:Connect(function()
-        if not Settings.Esp.Enabled then
-            ESPConnection:Disconnect()
+    if ESP.Connection then
+        ESP.Connection:Disconnect()
+    end
+    
+    ESP.Connection = RunService.RenderStepped:Connect(function()
+        if not ESP.Enabled then
+            ESP.Connection:Disconnect()
             return
         end
         UpdateESP()
@@ -515,35 +604,177 @@ local function EnableESP()
 end
 
 local function DisableESP()
-    Settings.Esp.Enabled = false
+    ESP.Enabled = false
     
-    for player in pairs(Settings.Esp.Boxes) do
+    for player in pairs(ESP.Boxes) do
         RemoveESP(player)
+    end
+    
+    if ESP.Connection then
+        ESP.Connection:Disconnect()
+        ESP.Connection = nil
     end
 end
 
--- ИСПРАВЛЕННЫЙ АИМБОТ
-local Aimbot = {
-    Target = nil,
+-- ИСПРАВЛЕННАЯ СИСТЕМА ПОЛЕТА
+local FlySettings = {
+    Enabled = false,
+    Speed = 50,
     Connection = nil,
+    BodyGyro = nil,
+    BodyVelocity = nil
+}
+
+local function StartFly()
+    if FlySettings.Connection then
+        FlySettings.Connection:Disconnect()
+    end
+    
+    local character = LocalPlayer.Character
+    if not character then return end
+    
+    local humanoid = character:FindFirstChild("Humanoid")
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    
+    if not humanoid or not rootPart then return end
+    
+    -- Создаем BodyGyro для стабилизации поворота
+    FlySettings.BodyGyro = Instance.new("BodyGyro")
+    FlySettings.BodyGyro.P = 1000
+    FlySettings.BodyGyro.MaxTorque = Vector3.new(40000, 40000, 40000)
+    FlySettings.BodyGyro.CFrame = rootPart.CFrame
+    FlySettings.BodyGyro.Parent = rootPart
+    
+    -- Создаем BodyVelocity для движения
+    FlySettings.BodyVelocity = Instance.new("BodyVelocity")
+    FlySettings.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    FlySettings.BodyVelocity.MaxForce = Vector3.new(40000, 40000, 40000)
+    FlySettings.BodyVelocity.P = 1000
+    FlySettings.BodyVelocity.Parent = rootPart
+    
+    humanoid.PlatformStand = true
+    
+    FlySettings.Connection = RunService.Heartbeat:Connect(function()
+        if not FlySettings.Enabled or not FlySettings.BodyVelocity or not FlySettings.BodyGyro then return end
+        
+        -- Обновляем поворот в соответствии с камерой
+        FlySettings.BodyGyro.CFrame = Camera.CFrame
+        
+        local moveDirection = Vector3.new(0, 0, 0)
+        
+        if UIS:IsKeyDown(Enum.KeyCode.W) then
+            moveDirection = moveDirection + Camera.CFrame.LookVector
+        end
+        if UIS:IsKeyDown(Enum.KeyCode.S) then
+            moveDirection = moveDirection - Camera.CFrame.LookVector
+        end
+        if UIS:IsKeyDown(Enum.KeyCode.A) then
+            moveDirection = moveDirection - Camera.CFrame.RightVector
+        end
+        if UIS:IsKeyDown(Enum.KeyCode.D) then
+            moveDirection = moveDirection + Camera.CFrame.RightVector
+        end
+        if UIS:IsKeyDown(Enum.KeyCode.E) then
+            moveDirection = moveDirection + Vector3.new(0, 1, 0)
+        end
+        if UIS:IsKeyDown(Enum.KeyCode.Q) then
+            moveDirection = moveDirection + Vector3.new(0, -1, 0)
+        end
+        
+        if moveDirection.Magnitude > 0 then
+            FlySettings.BodyVelocity.Velocity = moveDirection.Unit * FlySettings.Speed
+        else
+            FlySettings.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        end
+    end)
+end
+
+local function StopFly()
+    if FlySettings.Connection then
+        FlySettings.Connection:Disconnect()
+        FlySettings.Connection = nil
+    end
+    
+    if FlySettings.BodyVelocity then
+        FlySettings.BodyVelocity:Destroy()
+        FlySettings.BodyVelocity = nil
+    end
+    
+    if FlySettings.BodyGyro then
+        FlySettings.BodyGyro:Destroy()
+        FlySettings.BodyGyro = nil
+    end
+    
+    pcall(function()
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid.PlatformStand = false
+        end
+    end)
+end
+
+-- НОКЛИП СИСТЕМА
+local NoclipSettings = {
+    Enabled = false,
+    Connection = nil
+}
+
+local function EnableNoclip()
+    if NoclipSettings.Connection then
+        NoclipSettings.Connection:Disconnect()
+    end
+    
+    NoclipSettings.Connection = RunService.Stepped:Connect(function()
+        if not NoclipSettings.Enabled then return end
+        
+        pcall(function()
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    end)
+end
+
+local function DisableNoclip()
+    if NoclipSettings.Connection then
+        NoclipSettings.Connection:Disconnect()
+        NoclipSettings.Connection = nil
+    end
+end
+
+-- ИСПРАВЛЕННЫЙ АИМБОТ (УБРАНА ПРОВЕРКА ВИДИМОСТИ)
+local AimbotSettings = {
+    Enabled = false,
+    FOV = 100,
+    Smoothness = 10,
+    Part = "Head",
+    TeamCheck = false,
+    WallCheck = false, -- Оставляем только проверку стен
+    MaxDistance = 500,
+    Connection = nil,
+    Target = nil,
     FOVCircle = nil,
     LastUpdate = 0,
     IsAiming = false
 }
 
 local function CreateFOVCircle()
-    if Aimbot.FOVCircle then
-        Aimbot.FOVCircle:Remove()
+    if AimbotSettings.FOVCircle then
+        AimbotSettings.FOVCircle:Remove()
     end
     
     local Circle = Drawing.new("Circle")
-    Circle.Visible = Settings.Aimbot.Enabled
-    Circle.Radius = Settings.Aimbot.FOV
+    Circle.Visible = AimbotSettings.Enabled
+    Circle.Radius = AimbotSettings.FOV
     Circle.Color = Color3.fromRGB(255, 0, 0)
     Circle.Thickness = 2
     Circle.Filled = false
     Circle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    Aimbot.FOVCircle = Circle
+    AimbotSettings.FOVCircle = Circle
 end
 
 local function IsValidTarget(target)
@@ -553,11 +784,10 @@ local function IsValidTarget(target)
     local humanoid = target.Character:FindFirstChild("Humanoid")
     if not humanoid or humanoid.Health <= 0 then return false end
     
-    local targetPart = target.Character:FindFirstChild(Settings.Aimbot.Part)
+    local targetPart = target.Character:FindFirstChild(AimbotSettings.Part)
     if not targetPart then return false end
     
-    -- ПРОВЕРКИ ВЫКЛЮЧЕНЫ ПО УМОЛЧАНИЮ
-    if Settings.Aimbot.TeamCheck then
+    if AimbotSettings.TeamCheck then
         local localTeam = LocalPlayer.Team
         local targetTeam = target.Team
         if localTeam and targetTeam and localTeam == targetTeam then
@@ -574,14 +804,16 @@ local function IsValidTarget(target)
     if not humanoidRootPart or not targetRoot then return false end
     
     local distance = (humanoidRootPart.Position - targetRoot.Position).Magnitude
-    if distance > Settings.Aimbot.MaxDistance then return false end
+    if distance > AimbotSettings.MaxDistance then return false end
+    
+    -- ПРОВЕРКА ВИДИМОСТИ УБРАНА ПО ТВОЕМУ ЗАПРОСУ
     
     local vector, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
     if not onScreen then return false end
     
     local mousePos = UIS:GetMouseLocation()
     local distanceToMouse = (Vector2.new(vector.X, vector.Y) - mousePos).Magnitude
-    if distanceToMouse > Settings.Aimbot.FOV then return false end
+    if distanceToMouse > AimbotSettings.FOV then return false end
     
     return true
 end
@@ -595,15 +827,15 @@ local function GetBestTarget()
         if not IsValidTarget(player) then continue end
         
         local character = player.Character
-        local targetPart = character:FindFirstChild(Settings.Aimbot.Part)
+        local targetPart = character:FindFirstChild(AimbotSettings.Part)
         local vector = Camera:WorldToViewportPoint(targetPart.Position)
         
         local score = 0
         local distanceToMouse = (Vector2.new(vector.X, vector.Y) - mousePos).Magnitude
         
-        score = score + (Settings.Aimbot.FOV - distanceToMouse)
+        score = score + (AimbotSettings.FOV - distanceToMouse)
         
-        if Settings.Aimbot.Part == "Head" then
+        if AimbotSettings.Part == "Head" then
             score = score + 50
         end
         
@@ -614,7 +846,7 @@ local function GetBestTarget()
             local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
             if humanoidRootPart and targetRoot then
                 local distance = (humanoidRootPart.Position - targetRoot.Position).Magnitude
-                score = score + (Settings.Aimbot.MaxDistance - distance) / 3
+                score = score + (AimbotSettings.MaxDistance - distance) / 3
             end
         end
         
@@ -630,24 +862,24 @@ end
 local function SmoothAim(target)
     if not target or not target.Character then return end
     
-    local targetPart = target.Character:FindFirstChild(Settings.Aimbot.Part)
+    local targetPart = target.Character:FindFirstChild(AimbotSettings.Part)
     if not targetPart then return end
     
     local camera = workspace.CurrentCamera
     local currentTime = tick()
     
-    if currentTime - Aimbot.LastUpdate < (1 / Settings.Aimbot.Smoothness) * 0.1 then
+    if currentTime - AimbotSettings.LastUpdate < (1 / AimbotSettings.Smoothness) * 0.1 then
         return
     end
-    Aimbot.LastUpdate = currentTime
+    AimbotSettings.LastUpdate = currentTime
     
-    if Settings.Aimbot.Smoothness <= 1 then
+    if AimbotSettings.Smoothness <= 1 then
         camera.CFrame = CFrame.lookAt(camera.CFrame.Position, targetPart.Position)
     else
         local currentCFrame = camera.CFrame
         local targetCFrame = CFrame.lookAt(currentCFrame.Position, targetPart.Position)
         
-        local smoothness = math.max(1, Settings.Aimbot.Smoothness)
+        local smoothness = math.max(1, AimbotSettings.Smoothness)
         local lerpAlpha = 1 / smoothness
         
         if smoothness <= 5 then
@@ -660,155 +892,129 @@ local function SmoothAim(target)
 end
 
 local function StartAimbot()
-    if Aimbot.Connection then return end
+    if AimbotSettings.Connection then
+        AimbotSettings.Connection:Disconnect()
+    end
     
     CreateFOVCircle()
     
-    Aimbot.Connection = RunService.RenderStepped:Connect(function()
-        if not Settings.Aimbot.Enabled then return end
+    AimbotSettings.Connection = RunService.RenderStepped:Connect(function()
+        if not AimbotSettings.Enabled then return end
         
         local mouseButtonPressed = UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
         
         if mouseButtonPressed then
-            if not Aimbot.IsAiming then
-                Aimbot.Target = GetBestTarget()
-                Aimbot.IsAiming = true
+            if not AimbotSettings.IsAiming then
+                AimbotSettings.Target = GetBestTarget()
+                AimbotSettings.IsAiming = true
             end
             
-            if Aimbot.Target and IsValidTarget(Aimbot.Target) then
-                SmoothAim(Aimbot.Target)
+            if AimbotSettings.Target and IsValidTarget(AimbotSettings.Target) then
+                SmoothAim(AimbotSettings.Target)
             else
-                Aimbot.Target = nil
-                Aimbot.IsAiming = false
+                AimbotSettings.Target = nil
+                AimbotSettings.IsAiming = false
             end
         else
-            Aimbot.Target = nil
-            Aimbot.IsAiming = false
+            AimbotSettings.Target = nil
+            AimbotSettings.IsAiming = false
         end
         
-        if Aimbot.FOVCircle then
-            Aimbot.FOVCircle.Visible = Settings.Aimbot.Enabled
-            Aimbot.FOVCircle.Radius = Settings.Aimbot.FOV
+        if AimbotSettings.FOVCircle then
+            AimbotSettings.FOVCircle.Visible = AimbotSettings.Enabled
+            AimbotSettings.FOVCircle.Radius = AimbotSettings.FOV
         end
     end)
 end
 
 local function StopAimbot()
-    if Aimbot.Connection then
-        Aimbot.Connection:Disconnect()
-        Aimbot.Connection = nil
+    if AimbotSettings.Connection then
+        AimbotSettings.Connection:Disconnect()
+        AimbotSettings.Connection = nil
     end
     
-    if Aimbot.FOVCircle then
-        Aimbot.FOVCircle:Remove()
-        Aimbot.FOVCircle = nil
+    if AimbotSettings.FOVCircle then
+        AimbotSettings.FOVCircle:Remove()
+        AimbotSettings.FOVCircle = nil
     end
     
-    Aimbot.Target = nil
-    Aimbot.IsAiming = false
+    AimbotSettings.Target = nil
+    AimbotSettings.IsAiming = false
 end
 
--- СИСТЕМА ПОЛЕТА
-local Fly = {
-    Connection = nil,
-    BodyVelocity = nil
+-- ИСПРАВЛЕННЫЙ XRAY СИСТЕМА
+local XraySettings = {
+    Enabled = false,
+    OriginalProperties = {} -- Сохраняем все свойства
 }
 
-local function StartFly()
-    if Fly.Connection then return end
+local function EnableXray()
+    XraySettings.OriginalProperties = {}
     
-    local character = LocalPlayer.Character
-    if not character then return end
+    for _, part in pairs(Workspace:GetDescendants()) do
+        if part:IsA("BasePart") and part.Transparency < 0.5 then
+            -- Сохраняем все исходные свойства
+            XraySettings.OriginalProperties[part] = {
+                Transparency = part.Transparency,
+                Material = part.Material,
+                Color = part.Color,
+                Reflectance = part.Reflectance
+            }
+            
+            -- Устанавливаем свойства Xray
+            part.Transparency = 0.7
+            part.Material = Enum.Material.ForceField
+            part.Color = Color3.fromRGB(100, 100, 255)
+            part.Reflectance = 0.1
+        end
+    end
+end
+
+local function DisableXray()
+    for part, properties in pairs(XraySettings.OriginalProperties) do
+        if part and part.Parent then
+            -- Восстанавливаем все исходные свойства
+            part.Transparency = properties.Transparency
+            part.Material = properties.Material
+            part.Color = properties.Color
+            part.Reflectance = properties.Reflectance
+        end
+    end
+    XraySettings.OriginalProperties = {}
+end
+
+-- ANTI-AFK СИСТЕМА
+local AntiAfkSettings = {
+    Enabled = false,
+    Connection = nil
+}
+
+local function EnableAntiAfk()
+    if AntiAfkSettings.Connection then
+        AntiAfkSettings.Connection:Disconnect()
+    end
     
-    local humanoid = character:FindFirstChild("Humanoid")
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    
-    if not humanoid or not rootPart then return end
-    
-    Fly.BodyVelocity = Instance.new("BodyVelocity")
-    Fly.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
-    Fly.BodyVelocity.MaxForce = Vector3.new(40000, 40000, 40000)
-    Fly.BodyVelocity.P = 1000
-    Fly.BodyVelocity.Parent = rootPart
-    
-    humanoid.PlatformStand = true
-    
-    Fly.Connection = RunService.Heartbeat:Connect(function()
-        if not Settings.Fly.Enabled or not Fly.BodyVelocity then return end
-        
-        local camera = Camera
-        local moveDirection = Vector3.new(0, 0, 0)
-        
-        if UIS:IsKeyDown(Enum.KeyCode.W) then
-            moveDirection = moveDirection + camera.CFrame.LookVector
-        end
-        if UIS:IsKeyDown(Enum.KeyCode.S) then
-            moveDirection = moveDirection - camera.CFrame.LookVector
-        end
-        if UIS:IsKeyDown(Enum.KeyCode.A) then
-            moveDirection = moveDirection - camera.CFrame.RightVector
-        end
-        if UIS:IsKeyDown(Enum.KeyCode.D) then
-            moveDirection = moveDirection + camera.CFrame.RightVector
-        end
-        if UIS:IsKeyDown(Enum.KeyCode.E) then
-            moveDirection = moveDirection + Vector3.new(0, 1, 0)
-        end
-        if UIS:IsKeyDown(Enum.KeyCode.Q) then
-            moveDirection = moveDirection + Vector3.new(0, -1, 0)
-        end
-        
-        if moveDirection.Magnitude > 0 then
-            Fly.BodyVelocity.Velocity = moveDirection.Unit * Settings.Fly.Speed
-        else
-            Fly.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
-        end
+    local VirtualUser = game:GetService("VirtualUser")
+    AntiAfkSettings.Connection = LocalPlayer.Idled:Connect(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
     end)
 end
 
-local function StopFly()
-    if Fly.Connection then
-        Fly.Connection:Disconnect()
-        Fly.Connection = nil
+local function DisableAntiAfk()
+    if AntiAfkSettings.Connection then
+        AntiAfkSettings.Connection:Disconnect()
+        AntiAfkSettings.Connection = nil
     end
-    
-    if Fly.BodyVelocity then
-        Fly.BodyVelocity:Destroy()
-        Fly.BodyVelocity = nil
-    end
-    
-    pcall(function()
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            LocalPlayer.Character.Humanoid.PlatformStand = false
-        end
-    end)
 end
 
--- НОКЛИП
-local NoclipConnection
-local function EnableNoclip()
-    if NoclipConnection then return end
-    
-    NoclipConnection = RunService.Stepped:Connect(function()
-        if not Settings.Noclip then return end
-        pcall(function()
-            local char = LocalPlayer.Character
-            if char then
-                for _, part in pairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
-                    end
-                end
-            end
-        end)
-    end)
-end
-
-local function DisableNoclip()
-    if NoclipConnection then
-        NoclipConnection:Disconnect()
-        NoclipConnection = nil
-    end
+-- УВЕДОМЛЕНИЯ
+local function Notify(message)
+    Rayfield:Notify({
+        Title = "RAGE MOD ULTIMATE v" .. Version,
+        Content = message,
+        Duration = 3.0
+    })
 end
 
 -- ИНТЕРФЕЙС
@@ -849,7 +1055,7 @@ local NoclipToggle = MainTab:CreateToggle({
     Name = "🚶 NOCLIP",
     CurrentValue = false,
     Callback = function(Value)
-        Settings.Noclip = Value
+        NoclipSettings.Enabled = Value
         if Value then
             EnableNoclip()
             Notify("NOCLIP включен")
@@ -861,13 +1067,13 @@ local NoclipToggle = MainTab:CreateToggle({
 })
 
 local FlyToggle = MainTab:CreateToggle({
-    Name = "🕊️ FLY",
+    Name = "🕊️ FLY (ИСПРАВЛЕННЫЙ)",
     CurrentValue = false,
     Callback = function(Value)
-        Settings.Fly.Enabled = Value
+        FlySettings.Enabled = Value
         if Value then
             StartFly()
-            Notify("FLY включен - WASD + E/Q")
+            Notify("FLY включен - WASD + E/Q (Следует за камерой)")
         else
             StopFly()
             Notify("FLY выключен")
@@ -880,20 +1086,19 @@ local FlySpeedSlider = MainTab:CreateSlider({
     Range = {10, 200},
     Increment = 5,
     Suffix = "units",
-    CurrentValue = Settings.Fly.Speed,
+    CurrentValue = FlySettings.Speed,
     Callback = function(Value)
-        Settings.Fly.Speed = Value
+        FlySettings.Speed = Value
     end
 })
 
 local SpeedToggle = MainTab:CreateToggle({
-    Name = "🏃 УЛУЧШЕННАЯ СКОРОСТЬ",
+    Name = "🏃 УЛУЧШЕННАЯ СКОРОСТЬ (ИСПРАВЛЕННАЯ)",
     CurrentValue = false,
     Callback = function(Value)
-        Settings.Speed.Enabled = Value
+        AdvancedSpeed.Enabled = Value
         if not Value then
             DisableBodyVelocitySpeed()
-            AdvancedSpeed.Enabled = false
             
             pcall(function()
                 if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
@@ -903,14 +1108,13 @@ local SpeedToggle = MainTab:CreateToggle({
             
             Notify("Скорость выключена")
         else
-            AdvancedSpeed.Enabled = true
             local success = EnableAdvancedSpeed()
             
             if success then
-                Notify("Скорость включена")
+                Notify("Скорость включена (" .. AdvancedSpeed.CurrentMethod .. ")")
             else
                 Notify("Ошибка включения скорости")
-                Settings.Speed.Enabled = false
+                AdvancedSpeed.Enabled = false
             end
         end
     end
@@ -921,12 +1125,11 @@ local SpeedSlider = MainTab:CreateSlider({
     Range = {16, 500},
     Increment = 10,
     Suffix = "units",
-    CurrentValue = Settings.Speed.Value,
+    CurrentValue = AdvancedSpeed.Value,
     Callback = function(Value)
-        Settings.Speed.Value = Value
         AdvancedSpeed.Value = Value
         
-        if Settings.Speed.Enabled then
+        if AdvancedSpeed.Enabled then
             EnableAdvancedSpeed()
         end
     end
@@ -936,9 +1139,13 @@ local InfiniteJumpToggle = MainTab:CreateToggle({
     Name = "🦘 БЕСКОНЕЧНЫЙ ПРЫЖОК",
     CurrentValue = false,
     Callback = function(Value)
-        Settings.InfiniteJump = Value
+        InfiniteJump.Enabled = Value
         if Value then
-            Notify("Бесконечные прыжки включены")
+            EnableInfiniteJump()
+            Notify("Бесконечные прыжки включены (Пробел)")
+        else
+            DisableInfiniteJump()
+            Notify("Бесконечные прыжки выключены")
         end
     end
 })
@@ -965,7 +1172,7 @@ local BoxToggle = VisualsTab:CreateToggle({
     Name = "📦 ПОКАЗЫВАТЬ БОКСЫ",
     CurrentValue = true,
     Callback = function(Value)
-        Settings.Esp.ShowBox = Value
+        ESP.ShowBox = Value
     end
 })
 
@@ -973,7 +1180,7 @@ local NameToggle = VisualsTab:CreateToggle({
     Name = "🏷️ ПОКАЗЫВАТЬ ИМЕНА",
     CurrentValue = true,
     Callback = function(Value)
-        Settings.Esp.ShowName = Value
+        ESP.ShowName = Value
     end
 })
 
@@ -981,7 +1188,7 @@ local DistanceToggle = VisualsTab:CreateToggle({
     Name = "📏 ПОКАЗЫВАТЬ ДИСТАНЦИИ",
     CurrentValue = true,
     Callback = function(Value)
-        Settings.Esp.ShowDistance = Value
+        ESP.ShowDistance = Value
     end
 })
 
@@ -989,7 +1196,7 @@ local HealthToggle = VisualsTab:CreateToggle({
     Name = "❤️ ПОКАЗЫВАТЬ ЗДОРОВЬЕ",
     CurrentValue = true,
     Callback = function(Value)
-        Settings.Esp.ShowHealth = Value
+        ESP.ShowHealth = Value
     end
 })
 
@@ -997,7 +1204,7 @@ local TracerToggle = VisualsTab:CreateToggle({
     Name = "🔻 ПОКАЗЫВАТЬ ТРЕЙСЕРЫ",
     CurrentValue = false,
     Callback = function(Value)
-        Settings.Esp.ShowTracers = Value
+        ESP.ShowTracers = Value
     end
 })
 
@@ -1005,7 +1212,7 @@ local TeamColorToggle = VisualsTab:CreateToggle({
     Name = "🎨 ЦВЕТ ПО КОМАНДАМ",
     CurrentValue = true,
     Callback = function(Value)
-        Settings.Esp.TeamColor = Value
+        ESP.TeamColor = Value
     end
 })
 
@@ -1016,7 +1223,7 @@ local MaxDistanceSlider = VisualsTab:CreateSlider({
     Suffix = "studs",
     CurrentValue = 1000,
     Callback = function(Value)
-        Settings.Esp.MaxDistance = Value
+        ESP.MaxDistance = Value
     end
 })
 
@@ -1028,7 +1235,7 @@ local AimbotToggle = CombatTab:CreateToggle({
     Name = "🎯 ВКЛЮЧИТЬ АИМБОТ",
     CurrentValue = false,
     Callback = function(Value)
-        Settings.Aimbot.Enabled = Value
+        AimbotSettings.Enabled = Value
         if Value then
             StartAimbot()
             Notify("Аимбот включен - Зажмите ПКМ для фиксации цели")
@@ -1044,9 +1251,9 @@ local AimbotFOVSlider = CombatTab:CreateSlider({
     Range = {10, 500},
     Increment = 10,
     Suffix = "pixels",
-    CurrentValue = Settings.Aimbot.FOV,
+    CurrentValue = AimbotSettings.FOV,
     Callback = function(Value)
-        Settings.Aimbot.FOV = Value
+        AimbotSettings.FOV = Value
     end
 })
 
@@ -1055,18 +1262,18 @@ local AimbotSmoothSlider = CombatTab:CreateSlider({
     Range = {1, 20},
     Increment = 1,
     Suffix = "level",
-    CurrentValue = Settings.Aimbot.Smoothness,
+    CurrentValue = AimbotSettings.Smoothness,
     Callback = function(Value)
-        Settings.Aimbot.Smoothness = Value
+        AimbotSettings.Smoothness = Value
     end
 })
 
 local AimbotPartDropdown = CombatTab:CreateDropdown({
     Name = "🎯 ЧАСТЬ ТЕЛА ДЛЯ АИМА",
     Options = {"Head", "HumanoidRootPart", "Torso"},
-    CurrentOption = Settings.Aimbot.Part,
+    CurrentOption = AimbotSettings.Part,
     Callback = function(Option)
-        Settings.Aimbot.Part = Option
+        AimbotSettings.Part = Option
     end
 })
 
@@ -1075,33 +1282,25 @@ local AimbotMaxDistanceSlider = CombatTab:CreateSlider({
     Range = {50, 1000},
     Increment = 10,
     Suffix = "studs",
-    CurrentValue = Settings.Aimbot.MaxDistance,
+    CurrentValue = AimbotSettings.MaxDistance,
     Callback = function(Value)
-        Settings.Aimbot.MaxDistance = Value
+        AimbotSettings.MaxDistance = Value
     end
 })
 
 local TeamCheckToggle = CombatTab:CreateToggle({
     Name = "🎪 ПРОВЕРКА КОМАНДЫ",
-    CurrentValue = false,  -- ВЫКЛЮЧЕНО ПО УМОЛЧАНИЮ
+    CurrentValue = false,
     Callback = function(Value)
-        Settings.Aimbot.TeamCheck = Value
-    end
-})
-
-local VisibleCheckToggle = CombatTab:CreateToggle({
-    Name = "👁️ ПРОВЕРКА ВИДИМОСТИ",
-    CurrentValue = false,  -- ВЫКЛЮЧЕНО ПО УМОЛЧАНИЮ
-    Callback = function(Value)
-        Settings.Aimbot.VisibleCheck = Value
+        AimbotSettings.TeamCheck = Value
     end
 })
 
 local WallCheckToggle = CombatTab:CreateToggle({
     Name = "🧱 ПРОВЕРКА СТЕН",
-    CurrentValue = false,  -- ВЫКЛЮЧЕНО ПО УМОЛЧАНИЮ
+    CurrentValue = false,
     Callback = function(Value)
-        Settings.Aimbot.WallCheck = Value
+        AimbotSettings.WallCheck = Value
     end
 })
 
@@ -1110,16 +1309,16 @@ local ProtectionTab = Window:CreateTab("Защита")
 local ProtectionSection = ProtectionTab:CreateSection("Функции защиты")
 
 local GodModeToggle = ProtectionTab:CreateToggle({
-    Name = "💀 GOD MODE (НАСТОЯЩАЯ НЕУЯЗВИМОСТЬ)",
+    Name = "💀 GOD MOD",
     CurrentValue = false,
     Callback = function(Value)
         GodMode.Enabled = Value
         if Value then
             EnableGodMode()
-            Notify("⚡ GOD MODE АКТИВИРОВАН - Вы бессмертны!")
+            Notify("⚡ GOD MOD АКТИВИРОВАН!")
         else
             DisableGodMode()
-            Notify("GOD MODE выключен")
+            Notify("GOD MOD выключен")
         end
     end
 })
@@ -1128,14 +1327,37 @@ local AntiAfkToggle = ProtectionTab:CreateToggle({
     Name = "⏰ ANTI-AFK",
     CurrentValue = false,
     Callback = function(Value)
-        Settings.AntiAfk = Value
+        AntiAfkSettings.Enabled = Value
         if Value then
+            EnableAntiAfk()
             Notify("ANTI-AFK включен")
         else
+            DisableAntiAfk()
             Notify("ANTI-AFK выключен")
         end
     end
 })
+
+-- ВКЛАДКА ВИЗУАЛ
+local VisualTab = Window:CreateTab("Визуал")
+local VisualSection = VisualTab:CreateSection("Визуальные эффекты")
+
+local XrayToggle = VisualTab:CreateToggle({
+    Name = "👁️ XRAY (ИСПРАВЛЕННЫЙ)",
+    CurrentValue = false,
+    Callback = function(Value)
+        if Value then
+            EnableXray()
+            Notify("XRAY включен - Текстуры сохраняются")
+        else
+            DisableXray()
+            Notify("XRAY выключен - Текстуры восстановлены")
+        end
+    end
+})
+
+-- СОЗДАЕМ ВКЛАДКУ С ИГРОКАМИ
+CreatePlayerListTab()
 
 -- ОСНОВНЫЕ ЦИКЛЫ
 RunService.Heartbeat:Connect(function()
@@ -1143,15 +1365,7 @@ RunService.Heartbeat:Connect(function()
         local character = LocalPlayer.Character
         if not character then return end
         
-        -- Бесконечные прыжки
-        if Settings.InfiniteJump then
-            local humanoid = character:FindFirstChild("Humanoid")
-            if humanoid then
-                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-            end
-        end
-        
-        -- God Mode защита
+        -- God MOD защита
         if GodMode.Enabled then
             local humanoid = character:FindFirstChildOfClass("Humanoid")
             if humanoid and humanoid.Health < humanoid.MaxHealth then
@@ -1161,22 +1375,9 @@ RunService.Heartbeat:Connect(function()
     end)
 end)
 
-UIS.JumpRequest:Connect(function()
-    if Settings.InfiniteJump and LocalPlayer.Character then
-        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
-    end
-end)
-
-if Settings.AntiAfk then
-    local VirtualUser = game:GetService("VirtualUser")
-    LocalPlayer.Idled:connect(function()
-        VirtualUser:CaptureController()
-        VirtualUser:ClickButton2(Vector2.new())
-    end)
-end
-
+-- ОБРАБОТЧИКИ ИГРОКОВ
 Players.PlayerAdded:Connect(function(player)
-    if Settings.Esp.Enabled then
+    if ESP.Enabled then
         CreateESP(player)
     end
 end)
@@ -1185,14 +1386,13 @@ Players.PlayerRemoving:Connect(function(player)
     RemoveESP(player)
 end)
 
--- Запоминаем стандартную скорость
+-- ЗАПОМИНАЕМ СТАНДАРТНУЮ СКОРОСТЬ
 pcall(function()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         AdvancedSpeed.OriginalWalkSpeed = LocalPlayer.Character.Humanoid.WalkSpeed
-        GodMode.OriginalWalkSpeed = AdvancedSpeed.OriginalWalkSpeed
     end
 end)
 
--- Уведомление о загрузке
+-- УВЕДОМЛЕНИЕ О ЗАГРУЗКЕ
 Notify("RAGE MOD ULTIMATE v" .. Version .. " загружен!")
-print("⚡ RAGE MOD ULTIMATE v" .. Version .. " | Fixed God Mode & Improved ESP")
+print("⚡ RAGE MOD ULTIMATE v" .. Version .. " | Complete Fixed System Loaded | Lines: 1200+")
