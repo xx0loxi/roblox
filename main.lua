@@ -1,4 +1,4 @@
--- RAGE MOD - ULTIMATE VERSION WITH FIXED AIMBOT
+-- RAGE MOD - ULTIMATE VERSION WITH FIXED GOD MODE AND AUTO SPEED
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
@@ -16,53 +16,14 @@ local UIS = game:GetService("UserInputService")
 local Camera = workspace.CurrentCamera
 local TweenService = game:GetService("TweenService")
 
--- УЛУЧШЕННАЯ СИСТЕМА СКОРОСТИ С АВТОМАТИЧЕСКИМ АНТИ-ДЕТЕКТОМ
+-- УЛУЧШЕННАЯ СИСТЕМА СКОРОСТИ С АВТОМАТИЧЕСКИМ ВЫБОРОМ МЕТОДА
 local AdvancedSpeed = {
     Enabled = false,
     Value = 50,
-    CurrentMethod = "Auto",
     BodyVelocity = nil,
     Connection = nil,
-    OriginalWalkSpeed = 16,
-    LastMethodCheck = 0,
-    MethodCheckInterval = 5,
-    SafeMethods = {}
+    OriginalWalkSpeed = 16
 }
-
-local function DetectSafeMethods()
-    AdvancedSpeed.SafeMethods = {
-        Humanoid = true,
-        BodyVelocity = true,
-        Tween = true
-    }
-    
-    local antiCheatDetected = false
-    for _, service in pairs(game:GetChildren()) do
-        if string.find(service.Name:lower(), "anti") or string.find(service.Name:lower(), "cheat") then
-            antiCheatDetected = true
-            break
-        end
-    end
-    
-    if antiCheatDetected then
-        AdvancedSpeed.SafeMethods.BodyVelocity = false
-        AdvancedSpeed.SafeMethods.Tween = false
-    end
-    
-    return AdvancedSpeed.SafeMethods
-end
-
-local function GetBestSpeedMethod()
-    local methods = DetectSafeMethods()
-    
-    if methods.BodyVelocity then
-        return "BodyVelocity"
-    elseif methods.Tween then
-        return "Tween"
-    else
-        return "Humanoid"
-    end
-end
 
 local function EnableBodyVelocitySpeed()
     if AdvancedSpeed.BodyVelocity then 
@@ -78,27 +39,15 @@ local function EnableBodyVelocitySpeed()
     local success, result = pcall(function()
         AdvancedSpeed.BodyVelocity = Instance.new("BodyVelocity")
         AdvancedSpeed.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
-        AdvancedSpeed.BodyVelocity.MaxForce = Vector3.new(
-            math.random(9000, 11000), 
-            0, 
-            math.random(9000, 11000)
-        )
-        AdvancedSpeed.BodyVelocity.P = math.random(1200, 1300)
+        AdvancedSpeed.BodyVelocity.MaxForce = Vector3.new(10000, 0, 10000)
+        AdvancedSpeed.BodyVelocity.P = 1250
         
-        local randomNames = {"VelocityHelper", "MoveAssist", "PlayerHelper", "GameComponent"}
+        local randomNames = {"VelocityHelper", "MoveAssist", "PlayerHelper"}
         AdvancedSpeed.BodyVelocity.Name = randomNames[math.random(1, #randomNames)]
-        
         AdvancedSpeed.BodyVelocity.Parent = humanoidRootPart
-        
-        if humanoidRootPart:FindFirstChildOfClass("NetworkOwner") then
-            AdvancedSpeed.BodyVelocity.Parent = humanoidRootPart:FindFirstChildOfClass("NetworkOwner")
-        end
     end)
 
-    if not success then
-        AdvancedSpeed.SafeMethods.BodyVelocity = false
-        return false
-    end
+    if not success then return false end
 
     AdvancedSpeed.Connection = RunService.Heartbeat:Connect(function()
         if not AdvancedSpeed.Enabled or not AdvancedSpeed.BodyVelocity then return end
@@ -121,63 +70,9 @@ local function EnableBodyVelocitySpeed()
         if moveDirection.Magnitude > 0 then
             moveDirection = moveDirection.Unit * AdvancedSpeed.Value
             moveDirection = Vector3.new(moveDirection.X, 0, moveDirection.Z)
-            
-            local randomFactor = Vector3.new(
-                moveDirection.X * math.random(95, 105) / 100,
-                0,
-                moveDirection.Z * math.random(95, 105) / 100
-            )
-            
-            AdvancedSpeed.BodyVelocity.Velocity = randomFactor
+            AdvancedSpeed.BodyVelocity.Velocity = moveDirection
         else
             AdvancedSpeed.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
-        end
-    end)
-    
-    return true
-end
-
-local function EnableTweenSpeed()
-    local character = LocalPlayer.Character
-    if not character then return false end
-
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then return false end
-
-    AdvancedSpeed.Connection = RunService.Heartbeat:Connect(function()
-        if not AdvancedSpeed.Enabled then return end
-        
-        local moveDirection = Vector3.new(0, 0, 0)
-        
-        if UIS:IsKeyDown(Enum.KeyCode.W) then
-            moveDirection = moveDirection + Camera.CFrame.LookVector
-        end
-        if UIS:IsKeyDown(Enum.KeyCode.S) then
-            moveDirection = moveDirection - Camera.CFrame.LookVector
-        end
-        if UIS:IsKeyDown(Enum.KeyCode.A) then
-            moveDirection = moveDirection - Camera.CFrame.RightVector
-        end
-        if UIS:IsKeyDown(Enum.KeyCode.D) then
-            moveDirection = moveDirection + Camera.CFrame.RightVector
-        end
-        
-        if moveDirection.Magnitude > 0 then
-            moveDirection = moveDirection.Unit * AdvancedSpeed.Value
-            moveDirection = Vector3.new(moveDirection.X, 0, moveDirection.Z)
-            
-            local targetPosition = humanoidRootPart.Position + moveDirection * 0.1
-            local tweenInfo = TweenInfo.new(
-                0.1,
-                Enum.EasingStyle.Linear,
-                Enum.EasingDirection.Out,
-                0,
-                false,
-                0
-            )
-            
-            local tween = TweenService:Create(humanoidRootPart, tweenInfo, {Position = targetPosition})
-            tween:Play()
         end
     end)
     
@@ -195,14 +90,7 @@ local function EnableHumanoidSpeed()
             local humanoid = character:FindFirstChild("Humanoid")
             if not humanoid then return end
             
-            local randomSpeed = AdvancedSpeed.Value * math.random(98, 102) / 100
-            humanoid.WalkSpeed = randomSpeed
-            
-            if math.random(1, 100) == 1 then
-                humanoid.WalkSpeed = AdvancedSpeed.OriginalWalkSpeed
-                wait(0.05)
-                humanoid.WalkSpeed = randomSpeed
-            end
+            humanoid.WalkSpeed = AdvancedSpeed.Value
         end)
     end)
     
@@ -223,41 +111,92 @@ local function DisableBodyVelocitySpeed()
     end
 end
 
+-- АВТОМАТИЧЕСКИЙ ВЫБОР МЕТОДА СКОРОСТИ
 local function EnableAdvancedSpeed()
     DisableBodyVelocitySpeed()
     
-    local bestMethod = GetBestSpeedMethod()
-    AdvancedSpeed.CurrentMethod = bestMethod
+    -- Сначала пробуем BodyVelocity метод
+    local success = EnableBodyVelocitySpeed()
     
-    local success = false
-    
-    if bestMethod == "BodyVelocity" then
-        success = EnableBodyVelocitySpeed()
-        if not success then
-            bestMethod = GetBestSpeedMethod()
-            if bestMethod == "Tween" then
-                success = EnableTweenSpeed()
-            else
-                success = EnableHumanoidSpeed()
-            end
-        end
-    elseif bestMethod == "Tween" then
-        success = EnableTweenSpeed()
-        if not success then
-            success = EnableHumanoidSpeed()
-        end
-    else
+    -- Если BodyVelocity не сработал, используем Humanoid
+    if not success then
         success = EnableHumanoidSpeed()
     end
     
-    if success then
-        AdvancedSpeed.CurrentMethod = bestMethod
-        Notify("Скорость включена (" .. bestMethod .. " метод)")
-    else
-        Notify("Ошибка включения скорости")
-    end
-    
     return success
+end
+
+-- УЛУЧШЕННЫЙ GOD MODE (ПОЛНАЯ НЕУЯЗВИМОСТЬ)
+local GodModeConnections = {}
+
+local function EnableGodMode()
+    -- Отключаем предыдущие соединения
+    for _, connection in pairs(GodModeConnections) do
+        connection:Disconnect()
+    end
+    GodModeConnections = {}
+    
+    local character = LocalPlayer.Character
+    if not character then return end
+    
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    
+    -- Сохраняем оригинальное здоровье
+    local originalHealth = humanoid.Health
+    local originalMaxHealth = humanoid.MaxHealth
+    
+    -- Защита от урона
+    table.insert(GodModeConnections, humanoid.HealthChanged:Connect(function(newHealth)
+        if newHealth < originalMaxHealth then
+            humanoid.Health = originalMaxHealth
+        end
+    end))
+    
+    -- Защита от смерти
+    table.insert(GodModeConnections, humanoid.Died:Connect(function()
+        if Settings.GodMode then
+            -- Немедленное возрождение
+            local respawnLocation = character:FindFirstChild("HumanoidRootPart")
+            if respawnLocation then
+                respawnLocation.CFrame = CFrame.new(respawnLocation.Position)
+            end
+            humanoid.Health = originalMaxHealth
+        end
+    end))
+    
+    -- Постоянная проверка здоровья
+    table.insert(GodModeConnections, RunService.Heartbeat:Connect(function()
+        if not Settings.GodMode then return end
+        
+        pcall(function()
+            local currentChar = LocalPlayer.Character
+            if not currentChar then return end
+            
+            local currentHumanoid = currentChar:FindFirstChildOfClass("Humanoid")
+            if currentHumanoid and currentHumanoid.Health < currentHumanoid.MaxHealth then
+                currentHumanoid.Health = currentHumanoid.MaxHealth
+            end
+        end)
+    end))
+    
+    -- Защита от удаления человечка
+    table.insert(GodModeConnections, character.ChildRemoved:Connect(function(child)
+        if child:IsA("Humanoid") and Settings.GodMode then
+            wait(0.1)
+            local newHumanoid = character:FindFirstChildOfClass("Humanoid")
+            if newHumanoid then
+                newHumanoid.Health = newHumanoid.MaxHealth
+            end
+        end
+    end))
+end
+
+local function DisableGodMode()
+    for _, connection in pairs(GodModeConnections) do
+        connection:Disconnect()
+    end
+    GodModeConnections = {}
 end
 
 -- Настройки
@@ -343,16 +282,8 @@ local function TpToCursor()
     
     if part then
         local newPosition = position + Vector3.new(0, 3, 0)
-        local checkRay = Ray.new(newPosition + Vector3.new(0, 10, 0), Vector3.new(0, -20, 0))
-        local hit, hitPosition = workspace:FindPartOnRayWithIgnoreList(checkRay, ignoreList)
-        
-        if hit then
-            humanoidRootPart.CFrame = CFrame.new(hitPosition + Vector3.new(0, 5, 0))
-            Notify("Телепортирован на курсор")
-        else
-            humanoidRootPart.CFrame = CFrame.new(newPosition)
-            Notify("Телепортирован на курсор")
-        end
+        humanoidRootPart.CFrame = CFrame.new(newPosition)
+        Notify("Телепортирован на курсор")
     else
         Notify("Не удалось найти точку для телепорта")
     end
@@ -1025,7 +956,7 @@ local SpeedToggle = MainTab:CreateToggle({
             local success = EnableAdvancedSpeed()
             
             if success then
-                Notify("Скорость включена (" .. AdvancedSpeed.CurrentMethod .. ")")
+                Notify("Скорость включена")
             else
                 Notify("Ошибка включения скорости")
                 Settings.Speed.Enabled = false
@@ -1228,16 +1159,15 @@ local ProtectionTab = Window:CreateTab("Защита")
 local ProtectionSection = ProtectionTab:CreateSection("Функции защиты")
 
 local GodModeToggle = ProtectionTab:CreateToggle({
-    Name = "💀 GOD MODE",
+    Name = "💀 GOD MODE (ПОЛНАЯ НЕУЯЗВИМОСТЬ)",
     CurrentValue = false,
     Callback = function(Value)
         Settings.GodMode = Value
         if Value then
-            pcall(function()
-                LocalPlayer.Character.Humanoid.Health = LocalPlayer.Character.Humanoid.MaxHealth
-            end)
-            Notify("GOD MODE включен")
+            EnableGodMode()
+            Notify("GOD MODE включен - Вы бессмертны!")
         else
+            DisableGodMode()
             Notify("GOD MODE выключен")
         end
     end
@@ -1262,23 +1192,11 @@ RunService.Heartbeat:Connect(function()
         local character = LocalPlayer.Character
         if not character then return end
         
-        local currentTime = tick()
-        if currentTime - AdvancedSpeed.LastMethodCheck > AdvancedSpeed.MethodCheckInterval then
-            AdvancedSpeed.LastMethodCheck = currentTime
-            
-            if Settings.Speed.Enabled then
-                local bestMethod = GetBestSpeedMethod()
-                if bestMethod ~= AdvancedSpeed.CurrentMethod then
-                    AdvancedSpeed.CurrentMethod = bestMethod
-                    EnableAdvancedSpeed()
-                end
-            end
-        end
-        
-        if Settings.GodMode then
+        -- Бесконечные прыжки
+        if Settings.InfiniteJump then
             local humanoid = character:FindFirstChild("Humanoid")
-            if humanoid and humanoid.Health < humanoid.MaxHealth then
-                humanoid.Health = humanoid.MaxHealth
+            if humanoid then
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
             end
         end
     end)
@@ -1315,7 +1233,5 @@ pcall(function()
     end
 end)
 
-DetectSafeMethods()
-
-Notify("RAGE MOD ULTIMATE с исправленным аимботом загружен!")
-print("RAGE MOD ULTIMATE: Аимбот фиксируется на цели только при зажатой ПКМ")
+Notify("RAGE MOD ULTIMATE с улучшенным God Mode загружен!")
+print("RAGE MOD ULTIMATE: God Mode - полная неуязвимость, скорость - автоматический выбор метода")
