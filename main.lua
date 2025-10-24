@@ -1,10 +1,10 @@
--- RAGE MOD - ULTIMATE VERSION WITH IMPROVED TELEPORT
+-- RAGE MOD - ULTIMATE VERSION 0.8 BETA WITH ADVANCED GOD MODE
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "⚡ RAGE MOD | ULTIMATE",
-    LoadingTitle = "RAGE MOD ULTIMATE",
-    LoadingSubtitle = "Loading Ultimate Features...",
+    Name = "⚡ RAGE MOD | ULTIMATE v0.8 BETA",
+    LoadingTitle = "RAGE MOD ULTIMATE v0.8 BETA",
+    LoadingSubtitle = "Loading Advanced God Mode...",
     Theme = "Dark"
 })
 
@@ -16,10 +16,185 @@ local UIS = game:GetService("UserInputService")
 local Camera = workspace.CurrentCamera
 local TweenService = game:GetService("TweenService")
 
+-- ВЕРСИЯ
+local Version = "0.8 BETA"
+
+-- УЛУЧШЕННЫЙ GOD MODE (МНОГОУРОВНЕВАЯ ЗАЩИТА)
+local GodMode = {
+    Enabled = false,
+    Connections = {},
+    OriginalHealth = 100,
+    OriginalMaxHealth = 100,
+    LastHealthCheck = 0,
+    HealthCheckInterval = 0.1,
+    AntiDeathCooldown = 0,
+    ResurrectionAttempts = 0,
+    MaxResurrectionAttempts = 10
+}
+
+-- СЛОЖНАЯ СИСТЕМА GOD MODE
+local function EnableAdvancedGodMode()
+    -- Очищаем предыдущие соединения
+    for _, connection in pairs(GodMode.Connections) do
+        connection:Disconnect()
+    end
+    GodMode.Connections = {}
+    
+    local character = LocalPlayer.Character
+    if not character then
+        Notify("Персонаж не найден, God Mode будет применен при появлении")
+        return
+    end
+    
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then
+        Notify("Humanoid не найден, ожидание...")
+        return
+    end
+    
+    -- Сохраняем оригинальные значения здоровья
+    GodMode.OriginalHealth = humanoid.Health
+    GodMode.OriginalMaxHealth = humanoid.MaxHealth
+    GodMode.ResurrectionAttempts = 0
+    
+    -- УРОВЕНЬ 1: Постоянный мониторинг здоровья
+    table.insert(GodMode.Connections, RunService.Heartbeat:Connect(function()
+        if not GodMode.Enabled then return end
+        
+        local currentChar = LocalPlayer.Character
+        if not currentChar then return end
+        
+        local currentHumanoid = currentChar:FindFirstChildOfClass("Humanoid")
+        if not currentHumanoid then return end
+        
+        local currentTime = tick()
+        
+        -- Проверяем здоровье каждые 0.1 секунды
+        if currentTime - GodMode.LastHealthCheck > GodMode.HealthCheckInterval then
+            GodMode.LastHealthCheck = currentTime
+            
+            -- Если здоровье меньше максимума - восстанавливаем
+            if currentHumanoid.Health < currentHumanoid.MaxHealth then
+                currentHumanoid.Health = currentHumanoid.MaxHealth
+            end
+            
+            -- Если максимальное здоровье изменилось - обновляем
+            if currentHumanoid.MaxHealth ~= GodMode.OriginalMaxHealth then
+                GodMode.OriginalMaxHealth = currentHumanoid.MaxHealth
+            end
+        end
+    end))
+    
+    -- УРОВЕНЬ 2: Защита от смерти
+    table.insert(GodMode.Connections, humanoid.Died:Connect(function()
+        if not GodMode.Enabled then return end
+        
+        local currentTime = tick()
+        if currentTime - GodMode.AntiDeathCooldown < 1 then return end
+        GodMode.AntiDeathCooldown = currentTime
+        
+        if GodMode.ResurrectionAttempts < GodMode.MaxResurrectionAttempts then
+            GodMode.ResurrectionAttempts = GodMode.ResurrectionAttempts + 1
+            
+            -- Немедленное возрождение
+            wait(0.1)
+            
+            local newChar = LocalPlayer.Character
+            if newChar then
+                local newHumanoid = newChar:FindFirstChildOfClass("Humanoid")
+                if newHumanoid then
+                    newHumanoid.Health = newHumanoid.MaxHealth
+                    Notify("God Mode: Возрождение #" .. GodMode.ResurrectionAttempts)
+                end
+            end
+        else
+            Notify("God Mode: Достигнут лимит возрождений")
+        end
+    end))
+    
+    -- УРОВЕНЬ 3: Защита от изменения здоровья
+    table.insert(GodMode.Connections, humanoid.HealthChanged:Connect(function(newHealth)
+        if not GodMode.Enabled then return end
+        
+        if newHealth < humanoid.MaxHealth then
+            humanoid.Health = humanoid.MaxHealth
+        end
+    end))
+    
+    -- УРОВЕНЬ 4: Защита от удаления Humanoid
+    table.insert(GodMode.Connections, character.ChildRemoved:Connect(function(child)
+        if not GodMode.Enabled then return end
+        
+        if child:IsA("Humanoid") then
+            wait(0.5)
+            local newHumanoid = character:FindFirstChildOfClass("Humanoid")
+            if newHumanoid then
+                newHumanoid.Health = newHumanoid.MaxHealth
+            end
+        end
+    end))
+    
+    -- УРОВЕНЬ 5: Защита от телепорта на спавн при смерти
+    table.insert(GodMode.Connections, LocalPlayer.CharacterAdded:Connect(function(newChar)
+        if not GodMode.Enabled then return end
+        
+        wait(1) -- Ждем полной загрузки персонажа
+        
+        local newHumanoid = newChar:FindFirstChildOfClass("Humanoid")
+        if newHumanoid then
+            newHumanoid.Health = newHumanoid.MaxHealth
+            
+            -- Восстанавливаем позицию если это возрождение
+            local oldChar = character
+            if oldChar and oldChar:FindFirstChild("HumanoidRootPart") then
+                local oldPosition = oldChar.HumanoidRootPart.Position
+                if newChar:FindFirstChild("HumanoidRootPart") then
+                    newChar.HumanoidRootPart.CFrame = CFrame.new(oldPosition + Vector3.new(0, 5, 0))
+                end
+            end
+        end
+    end))
+    
+    -- УРОВЕНЬ 6: Защита от различных видов урона
+    table.insert(GodMode.Connections, RunService.Stepped:Connect(function()
+        if not GodMode.Enabled then return end
+        
+        pcall(function()
+            local currentChar = LocalPlayer.Character
+            if not currentChar then return end
+            
+            -- Защита от огня и лавы
+            for _, part in pairs(workspace:GetDescendants()) do
+                if part:IsA("Fire") or part:IsA("Sparkles") or part.Name:lower():find("fire") or part.Name:lower():find("lava") then
+                    if part:IsA("BasePart") and currentChar:FindFirstChild("HumanoidRootPart") then
+                        local distance = (currentChar.HumanoidRootPart.Position - part.Position).Magnitude
+                        if distance < 10 then
+                            local humanoid = currentChar:FindFirstChildOfClass("Humanoid")
+                            if humanoid then
+                                humanoid.Health = humanoid.MaxHealth
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    end))
+    
+    Notify("⚡ GOD MODE АКТИВИРОВАН (Уровень 6 защиты)")
+end
+
+local function DisableAdvancedGodMode()
+    for _, connection in pairs(GodMode.Connections) do
+        connection:Disconnect()
+    end
+    GodMode.Connections = {}
+    GodMode.Enabled = false
+end
+
 -- НАСТРОЙКИ ТЕЛЕПОРТА НА КУРСОР
 local TeleportSettings = {
     Enabled = false,
-    Key = Enum.KeyCode.X,  -- Клавиша по умолчанию
+    Key = Enum.KeyCode.X,
     Connection = nil
 }
 
@@ -122,88 +297,13 @@ end
 local function EnableAdvancedSpeed()
     DisableBodyVelocitySpeed()
     
-    -- Сначала пробуем BodyVelocity метод
     local success = EnableBodyVelocitySpeed()
     
-    -- Если BodyVelocity не сработал, используем Humanoid
     if not success then
         success = EnableHumanoidSpeed()
     end
     
     return success
-end
-
--- УЛУЧШЕННЫЙ GOD MODE (ПОЛНАЯ НЕУЯЗВИМОСТЬ)
-local GodModeConnections = {}
-
-local function EnableGodMode()
-    -- Отключаем предыдущие соединения
-    for _, connection in pairs(GodModeConnections) do
-        connection:Disconnect()
-    end
-    GodModeConnections = {}
-    
-    local character = LocalPlayer.Character
-    if not character then return end
-    
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
-    
-    -- Сохраняем оригинальное здоровье
-    local originalHealth = humanoid.Health
-    local originalMaxHealth = humanoid.MaxHealth
-    
-    -- Защита от урона
-    table.insert(GodModeConnections, humanoid.HealthChanged:Connect(function(newHealth)
-        if newHealth < originalMaxHealth then
-            humanoid.Health = originalMaxHealth
-        end
-    end))
-    
-    -- Защита от смерти
-    table.insert(GodModeConnections, humanoid.Died:Connect(function()
-        if Settings.GodMode then
-            -- Немедленное возрождение
-            local respawnLocation = character:FindFirstChild("HumanoidRootPart")
-            if respawnLocation then
-                respawnLocation.CFrame = CFrame.new(respawnLocation.Position)
-            end
-            humanoid.Health = originalMaxHealth
-        end
-    end))
-    
-    -- Постоянная проверка здоровья
-    table.insert(GodModeConnections, RunService.Heartbeat:Connect(function()
-        if not Settings.GodMode then return end
-        
-        pcall(function()
-            local currentChar = LocalPlayer.Character
-            if not currentChar then return end
-            
-            local currentHumanoid = currentChar:FindFirstChildOfClass("Humanoid")
-            if currentHumanoid and currentHumanoid.Health < currentHumanoid.MaxHealth then
-                currentHumanoid.Health = currentHumanoid.MaxHealth
-            end
-        end)
-    end))
-    
-    -- Защита от удаления человечка
-    table.insert(GodModeConnections, character.ChildRemoved:Connect(function(child)
-        if child:IsA("Humanoid") and Settings.GodMode then
-            wait(0.1)
-            local newHumanoid = character:FindFirstChildOfClass("Humanoid")
-            if newHumanoid then
-                newHumanoid.Health = newHumanoid.MaxHealth
-            end
-        end
-    end))
-end
-
-local function DisableGodMode()
-    for _, connection in pairs(GodModeConnections) do
-        connection:Disconnect()
-    end
-    GodModeConnections = {}
 end
 
 -- УЛУЧШЕННЫЙ ТЕЛЕПОРТ НА КУРСОР С НАСТРАИВАЕМОЙ КЛАВИШЕЙ
@@ -312,9 +412,9 @@ local Settings = {
 -- Уведомления
 local function Notify(message)
     Rayfield:Notify({
-        Title = "RAGE MOD ULTIMATE",
+        Title = "RAGE MOD ULTIMATE v" .. Version,
         Content = message,
-        Duration = 2.5
+        Duration = 3.0
     })
 end
 
@@ -543,7 +643,7 @@ local function StopAimbot()
     Aimbot.IsAiming = false
 end
 
--- ESP система (остается без изменений)
+-- ESP система
 local function CreateESP(player)
     if Settings.Esp.Boxes[player] then return end
     
@@ -943,7 +1043,6 @@ local TeleportKeyDropdown = MainTab:CreateDropdown({
         TeleportSettings.Key = Enum.KeyCode[Option]
         Notify("Клавиша телепорта изменена на: " .. Option)
         
-        -- Перезапускаем слушатель если телепорт включен
         if TeleportSettings.Enabled then
             StartTeleportListener()
         end
@@ -1133,7 +1232,7 @@ local MaxDistanceSlider = VisualsTab:CreateSlider({
     end
 })
 
--- Вкладка Аимбот (ИСПРАВЛЕННАЯ)
+-- Вкладка Аимбот
 local CombatTab = Window:CreateTab("Аимбот")
 local AimbotSection = CombatTab:CreateSection("Настройки аимбота")
 
@@ -1215,15 +1314,15 @@ local ProtectionTab = Window:CreateTab("Защита")
 local ProtectionSection = ProtectionTab:CreateSection("Функции защиты")
 
 local GodModeToggle = ProtectionTab:CreateToggle({
-    Name = "💀 GOD MODE",
+    Name = "💀 ADVANCED GOD MODE",
     CurrentValue = false,
     Callback = function(Value)
-        Settings.GodMode = Value
+        GodMode.Enabled = Value
         if Value then
-            EnableGodMode()
-            Notify("GOD MODE включен")
+            EnableAdvancedGodMode()
+            Notify("⚡ ADVANCED GOD MODE АКТИВИРОВАН!")
         else
-            DisableGodMode()
+            DisableAdvancedGodMode()
             Notify("GOD MODE выключен")
         end
     end
@@ -1289,5 +1388,6 @@ pcall(function()
     end
 end)
 
-Notify("RAGE MOD ULTIMATE с улучшенным телепортом загружен!")
-print("RAGE MOD ULTIMATE: Телепорт на курсор - включите тумблер и нажмите установленную клавишу")
+-- Уведомление о загрузке
+Notify("RAGE MOD ULTIMATE v" .. Version .. " загружен!")
+print("⚡ RAGE MOD ULTIMATE v" .. Version .. " | Advanced God Mode активирован")
