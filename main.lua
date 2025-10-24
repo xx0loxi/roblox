@@ -1159,13 +1159,13 @@ local ProtectionTab = Window:CreateTab("Защита")
 local ProtectionSection = ProtectionTab:CreateSection("Функции защиты")
 
 local GodModeToggle = ProtectionTab:CreateToggle({
-    Name = "💀 GOD MODE (ПОЛНАЯ НЕУЯЗВИМОСТЬ)",
+    Name = "💀 GOD MODE",
     CurrentValue = false,
     Callback = function(Value)
         Settings.GodMode = Value
         if Value then
             EnableGodMode()
-            Notify("GOD MODE включен - Вы бессмертны!")
+            Notify("GOD MODE включен")
         else
             DisableGodMode()
             Notify("GOD MODE выключен")
