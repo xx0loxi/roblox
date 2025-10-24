@@ -1,12 +1,12 @@
---= RAGE MOD - ULTIMATE VERSION 1.0 BETA =--
+--= RAGE MOD - ULTIMATE VERSION 2.0 BETA =--
 --= СОЗДАТЕЛЬ: xx_loxi =--
 --= АВТОМАТИЧЕСКИЙ СТЕЛС-РЕЖИМ ВКЛЮЧЕН =--
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "⚡ RAGE MOD | ULTIMATE v1.0 BETA | xx_loxi",
-    LoadingTitle = "RAGE MOD ULTIMATE v1.0 BETA",
+    Name = "⚡ RAGE MOD | ULTIMATE v2.0 BETA | xx_loxi",
+    LoadingTitle = "RAGE MOD ULTIMATE v2.0 BETA",
     LoadingSubtitle = "Loading Advanced Features...",
     Theme = "Dark"
 })
@@ -35,20 +35,16 @@ local StealthMode = {
     Status = "UNDETECTED"
 }
 
--- ИНДИКАТОР СТАТУСА
+-- ИНДИКАТОР СТАТУСА (ТОЛЬКО ЗЕЛЕНАЯ ТОЧКА)
 local StatusIndicator = {
     Dot = nil,
-    Text = nil,
     Connection = nil
 }
 
--- Создаем индикатор статуса
+-- Создаем индикатор статуса (только зеленая точка)
 local function CreateStatusIndicator()
     if StatusIndicator.Dot then
         StatusIndicator.Dot:Remove()
-    end
-    if StatusIndicator.Text then
-        StatusIndicator.Text:Remove()
     end
     
     -- Зеленая мигающая точка
@@ -60,25 +56,14 @@ local function CreateStatusIndicator()
     StatusIndicator.Dot.Radius = 5
     StatusIndicator.Dot.Position = Vector2.new(30, 35)
     
-    -- Текст статуса
-    StatusIndicator.Text = Drawing.new("Text")
-    StatusIndicator.Text.Visible = true
-    StatusIndicator.Text.Color = Color3.fromRGB(0, 255, 0)
-    StatusIndicator.Text.Size = 14
-    StatusIndicator.Text.Outline = true
-    StatusIndicator.Text.Text = "STATUS: UNDETECTED"
-    StatusIndicator.Text.Position = Vector2.new(50, 28)
-    
     -- Обновление статуса с миганием
     if StatusIndicator.Connection then
         StatusIndicator.Connection:Disconnect()
     end
     
-    local blinkState = true
     StatusIndicator.Connection = RunService.RenderStepped:Connect(function()
         local viewportSize = Camera.ViewportSize
         StatusIndicator.Dot.Position = Vector2.new(30, 35)
-        StatusIndicator.Text.Position = Vector2.new(50, 28)
         
         -- Медленное мигание (каждые 2 секунды)
         if tick() % 2 > 1 then
@@ -179,18 +164,20 @@ local function ApplyTimeOfDay()
 end
 
 local function EnableTimeOfDay()
-    -- Сохраняем оригинальные настройки освещения
-    TimeOfDay.OriginalProperties = {
-        ClockTime = Lighting.ClockTime,
-        Brightness = Lighting.Brightness,
-        Ambient = Lighting.Ambient,
-        OutdoorAmbient = Lighting.OutdoorAmbient,
-        FogColor = Lighting.FogColor,
-        FogEnd = Lighting.FogEnd,
-        GlobalShadows = Lighting.GlobalShadows,
-        ColorShift_Top = Lighting.ColorShift_Top,
-        ExposureCompensation = Lighting.ExposureCompensation
-    }
+    -- Сохраняем оригинальные настройки освещения только при первом включении
+    if not next(TimeOfDay.OriginalProperties) then
+        TimeOfDay.OriginalProperties = {
+            ClockTime = Lighting.ClockTime,
+            Brightness = Lighting.Brightness,
+            Ambient = Lighting.Ambient,
+            OutdoorAmbient = Lighting.OutdoorAmbient,
+            FogColor = Lighting.FogColor,
+            FogEnd = Lighting.FogEnd,
+            GlobalShadows = Lighting.GlobalShadows,
+            ColorShift_Top = Lighting.ColorShift_Top,
+            ExposureCompensation = Lighting.ExposureCompensation
+        }
+    end
     
     -- Немедленно применяем выбранное время суток
     ApplyTimeOfDay()
@@ -200,7 +187,7 @@ end
 
 local function DisableTimeOfDay()
     -- Восстанавливаем оригинальные настройки
-    if TimeOfDay.OriginalProperties.ClockTime then
+    if next(TimeOfDay.OriginalProperties) then
         for property, value in pairs(TimeOfDay.OriginalProperties) do
             if Lighting[property] ~= nil then
                 Lighting[property] = value
@@ -956,11 +943,11 @@ local function DisableNoclip()
     end
 end
 
--- ИСПРАВЛЕННЫЙ АИМБОТ (СТАБИЛЬНАЯ ВЕРСИЯ)
+-- БЫСТРЫЙ АИМБОТ (УЛУЧШЕННАЯ СКОРОСТЬ)
 local AimbotSettings = {
     Enabled = false,
     FOV = 100,
-    Smoothness = 0.1, -- Фиксированное значение для стабильности
+    Smoothness = 0.3, -- УВЕЛИЧЕНО ДЛЯ БЫСТРОГО НАВЕДЕНИЯ
     Part = "Head",
     TeamCheck = false,
     WallCheck = false,
@@ -1075,7 +1062,7 @@ local function SmoothAim(target)
     
     local camera = workspace.CurrentCamera
     
-    -- Стабильное наведение без дерганий
+    -- БЫСТРОЕ НАВЕДЕНИЕ С МЕНЬШИМ СГЛАЖИВАНИЕМ
     local currentCFrame = camera.CFrame
     local targetCFrame = CFrame.lookAt(currentCFrame.Position, targetPart.Position)
     
@@ -1311,7 +1298,7 @@ local SpeedToggle = MainTab:CreateToggle({
 
 local SpeedSlider = MainTab:CreateSlider({
     Name = "СКОРОСТЬ ПЕРЕДВИЖЕНИЯ",
-    Range = {16, 1000},
+    Range = {16, 500},
     Increment = 10,
     Suffix = "units",
     CurrentValue = AdvancedSpeed.Value,
@@ -1416,12 +1403,12 @@ local MaxDistanceSlider = VisualsTab:CreateSlider({
     end
 })
 
--- ВКЛАДКА АИМБОТ (УПРОЩЕННАЯ)
+-- ВКЛАДКА АИМБОТ (БЫСТРЫЙ)
 local CombatTab = Window:CreateTab("Аимбот")
 local AimbotSection = CombatTab:CreateSection("Настройки аимбота")
 
 local AimbotToggle = CombatTab:CreateToggle({
-    Name = "🎯 ВКЛЮЧИТЬ АИМБОТ (СТАБИЛЬНЫЙ)",
+    Name = "🎯 ВКЛЮЧИТЬ АИМБОТ (БЫСТРЫЙ)",
     CurrentValue = false,
     Callback = function(Value)
         AimbotSettings.Enabled = Value
@@ -1562,7 +1549,7 @@ InfoSection:CreateLabel("🔒 СТЕЛС-РЕЖИМ: ВКЛЮЧЕН")
 InfoSection:CreateLabel("🛡️ Анти-обнаружение: РАБОТАЕТ")
 InfoSection:CreateLabel("⏱️ Случайные задержки: ВКЛЮЧЕНО")
 InfoSection:CreateLabel("🔤 Случайные имена: ВКЛЮЧЕНО")
-InfoSection:CreateLabel("🎯 Аимбот: СТАБИЛЬНЫЙ")
+InfoSection:CreateLabel("🎯 Аимбот: БЫСТРЫЙ")
 InfoSection:CreateLabel("🏃 Скорость: ИСПРАВЛЕНА")
 InfoSection:CreateLabel("🌅 Время суток: РАБОЧЕЕ")
 InfoSection:CreateLabel("👤 Создатель: xx_loxi")
@@ -1618,4 +1605,4 @@ CreateStatusIndicator()
 -- УВЕДОМЛЕНИЕ О ЗАГРУЗКЕ
 Notify("RAGE MOD ULTIMATE v" .. Version .. " загружен! Создатель: xx_loxi")
 print("⚡ RAGE MOD ULTIMATE v" .. Version .. " | Creator: xx_loxi")
-print("🔒 STEALTH MODE: ACTIVE | AIMBOT: STABLE | SPEED: FIXED | TIME OF DAY: WORKING")
+print("🔒 STEALTH MODE: ACTIVE | AIMBOT: FAST | SPEED: FIXED | TIME OF DAY: WORKING")
