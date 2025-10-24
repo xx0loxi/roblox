@@ -1,4 +1,4 @@
--- RAGE MOD - ULTIMATE VERSION WITH FIXED GOD MODE AND AUTO SPEED
+-- RAGE MOD - ULTIMATE VERSION WITH IMPROVED TELEPORT
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
@@ -15,6 +15,13 @@ local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local Camera = workspace.CurrentCamera
 local TweenService = game:GetService("TweenService")
+
+-- НАСТРОЙКИ ТЕЛЕПОРТА НА КУРСОР
+local TeleportSettings = {
+    Enabled = false,
+    Key = Enum.KeyCode.X,  -- Клавиша по умолчанию
+    Connection = nil
+}
 
 -- УЛУЧШЕННАЯ СИСТЕМА СКОРОСТИ С АВТОМАТИЧЕСКИМ ВЫБОРОМ МЕТОДА
 local AdvancedSpeed = {
@@ -199,6 +206,57 @@ local function DisableGodMode()
     GodModeConnections = {}
 end
 
+-- УЛУЧШЕННЫЙ ТЕЛЕПОРТ НА КУРСОР С НАСТРАИВАЕМОЙ КЛАВИШЕЙ
+local function TpToCursor()
+    if not LocalPlayer.Character then
+        Notify("Персонаж не найден")
+        return
+    end
+    
+    local humanoidRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then
+        Notify("HumanoidRootPart не найден")
+        return
+    end
+    
+    local mouse = LocalPlayer:GetMouse()
+    local unitRay = Camera:ViewportPointToRay(mouse.X, mouse.Y)
+    local ray = Ray.new(unitRay.Origin, unitRay.Direction * 1000)
+    
+    local ignoreList = {LocalPlayer.Character}
+    local part, position = workspace:FindPartOnRayWithIgnoreList(ray, ignoreList)
+    
+    if part then
+        local newPosition = position + Vector3.new(0, 3, 0)
+        humanoidRootPart.CFrame = CFrame.new(newPosition)
+        Notify("Телепортирован на курсор")
+    else
+        Notify("Не удалось найти точку для телепорта")
+    end
+end
+
+-- ФУНКЦИЯ ДЛЯ ОБРАБОТКИ НАЖАТИЯ КЛАВИШ ТЕЛЕПОРТА
+local function StartTeleportListener()
+    if TeleportSettings.Connection then
+        TeleportSettings.Connection:Disconnect()
+    end
+    
+    TeleportSettings.Connection = UIS.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        
+        if input.KeyCode == TeleportSettings.Key and TeleportSettings.Enabled then
+            TpToCursor()
+        end
+    end)
+end
+
+local function StopTeleportListener()
+    if TeleportSettings.Connection then
+        TeleportSettings.Connection:Disconnect()
+        TeleportSettings.Connection = nil
+    end
+end
+
 -- Настройки
 local Settings = {
     Noclip = false,
@@ -258,35 +316,6 @@ local function Notify(message)
         Content = message,
         Duration = 2.5
     })
-end
-
--- Телепорт на курсор
-local function TpToCursor()
-    if not LocalPlayer.Character then
-        Notify("Персонаж не найден")
-        return
-    end
-    
-    local humanoidRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then
-        Notify("HumanoidRootPart не найден")
-        return
-    end
-    
-    local mouse = LocalPlayer:GetMouse()
-    local unitRay = Camera:ViewportPointToRay(mouse.X, mouse.Y)
-    local ray = Ray.new(unitRay.Origin, unitRay.Direction * 1000)
-    
-    local ignoreList = {LocalPlayer.Character}
-    local part, position = workspace:FindPartOnRayWithIgnoreList(ray, ignoreList)
-    
-    if part then
-        local newPosition = position + Vector3.new(0, 3, 0)
-        humanoidRootPart.CFrame = CFrame.new(newPosition)
-        Notify("Телепортирован на курсор")
-    else
-        Notify("Не удалось найти точку для телепорта")
-    end
 end
 
 -- ИСПРАВЛЕННЫЙ АИМБОТ
@@ -889,9 +918,36 @@ end
 local MainTab = Window:CreateTab("Главная")
 local MovementSection = MainTab:CreateSection("Передвижение")
 
-local TpToCursorBtn = MainTab:CreateButton({
-    Name = "📌 ТП НА КУРСОР",
-    Callback = TpToCursor
+-- НАСТРОЙКИ ТЕЛЕПОРТА НА КУРСОР
+local TeleportToggle = MainTab:CreateToggle({
+    Name = "📌 ТЕЛЕПОРТ НА КУРСОР",
+    CurrentValue = false,
+    Callback = function(Value)
+        TeleportSettings.Enabled = Value
+        if Value then
+            StartTeleportListener()
+            Notify("Телепорт на курсор включен (Клавиша: " .. tostring(TeleportSettings.Key) .. ")")
+        else
+            StopTeleportListener()
+            Notify("Телепорт на курсор выключен")
+        end
+    end
+})
+
+-- ВЫБОР КЛАВИШИ ДЛЯ ТЕЛЕПОРТА
+local TeleportKeyDropdown = MainTab:CreateDropdown({
+    Name = "🔤 КЛАВИША ТЕЛЕПОРТА",
+    Options = {"X", "C", "V", "F", "G", "T", "Y", "B", "N", "M"},
+    CurrentOption = "X",
+    Callback = function(Option)
+        TeleportSettings.Key = Enum.KeyCode[Option]
+        Notify("Клавиша телепорта изменена на: " .. Option)
+        
+        -- Перезапускаем слушатель если телепорт включен
+        if TeleportSettings.Enabled then
+            StartTeleportListener()
+        end
+    end
 })
 
 local NoclipToggle = MainTab:CreateToggle({
@@ -1233,5 +1289,5 @@ pcall(function()
     end
 end)
 
-Notify("RAGE MOD ULTIMATE с улучшенным God Mode загружен!")
-print("RAGE MOD ULTIMATE: God Mode - полная неуязвимость, скорость - автоматический выбор метода")
+Notify("RAGE MOD ULTIMATE с улучшенным телепортом загружен!")
+print("RAGE MOD ULTIMATE: Телепорт на курсор - включите тумблер и нажмите установленную клавишу")
