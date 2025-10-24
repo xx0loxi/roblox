@@ -1,10 +1,10 @@
--- RAGE MOD - ULTIMATE VERSION 0.8 BETA WITH ADVANCED GOD MODE
+-- RAGE MOD - ULTIMATE VERSION 0.8 BETA WITH FIXED GOD MODE
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
     Name = "⚡ RAGE MOD | ULTIMATE v0.8 BETA",
     LoadingTitle = "RAGE MOD ULTIMATE v0.8 BETA",
-    LoadingSubtitle = "Loading Advanced God Mode...",
+    LoadingSubtitle = "Loading Fixed God Mode...",
     Theme = "Dark"
 })
 
@@ -19,176 +19,44 @@ local TweenService = game:GetService("TweenService")
 -- ВЕРСИЯ
 local Version = "0.8 BETA"
 
--- УЛУЧШЕННЫЙ GOD MODE (МНОГОУРОВНЕВАЯ ЗАЩИТА)
+-- ИСПРАВЛЕННЫЙ GOD MODE (БЕЗ ЛАГОВ И НАСТОЯЩАЯ НЕУЯЗВИМОСТЬ)
 local GodMode = {
     Enabled = false,
-    Connections = {},
-    OriginalHealth = 100,
-    OriginalMaxHealth = 100,
-    LastHealthCheck = 0,
-    HealthCheckInterval = 0.1,
-    AntiDeathCooldown = 0,
-    ResurrectionAttempts = 0,
-    MaxResurrectionAttempts = 10
+    Connection = nil,
+    OriginalWalkSpeed = 16
 }
 
--- СЛОЖНАЯ СИСТЕМА GOD MODE
-local function EnableAdvancedGodMode()
-    -- Очищаем предыдущие соединения
-    for _, connection in pairs(GodMode.Connections) do
-        connection:Disconnect()
-    end
-    GodMode.Connections = {}
-    
-    local character = LocalPlayer.Character
-    if not character then
-        Notify("Персонаж не найден, God Mode будет применен при появлении")
-        return
+local function EnableGodMode()
+    if GodMode.Connection then
+        GodMode.Connection:Disconnect()
     end
     
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if not humanoid then
-        Notify("Humanoid не найден, ожидание...")
-        return
-    end
-    
-    -- Сохраняем оригинальные значения здоровья
-    GodMode.OriginalHealth = humanoid.Health
-    GodMode.OriginalMaxHealth = humanoid.MaxHealth
-    GodMode.ResurrectionAttempts = 0
-    
-    -- УРОВЕНЬ 1: Постоянный мониторинг здоровья
-    table.insert(GodMode.Connections, RunService.Heartbeat:Connect(function()
-        if not GodMode.Enabled then return end
-        
-        local currentChar = LocalPlayer.Character
-        if not currentChar then return end
-        
-        local currentHumanoid = currentChar:FindFirstChildOfClass("Humanoid")
-        if not currentHumanoid then return end
-        
-        local currentTime = tick()
-        
-        -- Проверяем здоровье каждые 0.1 секунды
-        if currentTime - GodMode.LastHealthCheck > GodMode.HealthCheckInterval then
-            GodMode.LastHealthCheck = currentTime
-            
-            -- Если здоровье меньше максимума - восстанавливаем
-            if currentHumanoid.Health < currentHumanoid.MaxHealth then
-                currentHumanoid.Health = currentHumanoid.MaxHealth
-            end
-            
-            -- Если максимальное здоровье изменилось - обновляем
-            if currentHumanoid.MaxHealth ~= GodMode.OriginalMaxHealth then
-                GodMode.OriginalMaxHealth = currentHumanoid.MaxHealth
-            end
-        end
-    end))
-    
-    -- УРОВЕНЬ 2: Защита от смерти
-    table.insert(GodMode.Connections, humanoid.Died:Connect(function()
-        if not GodMode.Enabled then return end
-        
-        local currentTime = tick()
-        if currentTime - GodMode.AntiDeathCooldown < 1 then return end
-        GodMode.AntiDeathCooldown = currentTime
-        
-        if GodMode.ResurrectionAttempts < GodMode.MaxResurrectionAttempts then
-            GodMode.ResurrectionAttempts = GodMode.ResurrectionAttempts + 1
-            
-            -- Немедленное возрождение
-            wait(0.1)
-            
-            local newChar = LocalPlayer.Character
-            if newChar then
-                local newHumanoid = newChar:FindFirstChildOfClass("Humanoid")
-                if newHumanoid then
-                    newHumanoid.Health = newHumanoid.MaxHealth
-                    Notify("God Mode: Возрождение #" .. GodMode.ResurrectionAttempts)
-                end
-            end
-        else
-            Notify("God Mode: Достигнут лимит возрождений")
-        end
-    end))
-    
-    -- УРОВЕНЬ 3: Защита от изменения здоровья
-    table.insert(GodMode.Connections, humanoid.HealthChanged:Connect(function(newHealth)
-        if not GodMode.Enabled then return end
-        
-        if newHealth < humanoid.MaxHealth then
-            humanoid.Health = humanoid.MaxHealth
-        end
-    end))
-    
-    -- УРОВЕНЬ 4: Защита от удаления Humanoid
-    table.insert(GodMode.Connections, character.ChildRemoved:Connect(function(child)
-        if not GodMode.Enabled then return end
-        
-        if child:IsA("Humanoid") then
-            wait(0.5)
-            local newHumanoid = character:FindFirstChildOfClass("Humanoid")
-            if newHumanoid then
-                newHumanoid.Health = newHumanoid.MaxHealth
-            end
-        end
-    end))
-    
-    -- УРОВЕНЬ 5: Защита от телепорта на спавн при смерти
-    table.insert(GodMode.Connections, LocalPlayer.CharacterAdded:Connect(function(newChar)
-        if not GodMode.Enabled then return end
-        
-        wait(1) -- Ждем полной загрузки персонажа
-        
-        local newHumanoid = newChar:FindFirstChildOfClass("Humanoid")
-        if newHumanoid then
-            newHumanoid.Health = newHumanoid.MaxHealth
-            
-            -- Восстанавливаем позицию если это возрождение
-            local oldChar = character
-            if oldChar and oldChar:FindFirstChild("HumanoidRootPart") then
-                local oldPosition = oldChar.HumanoidRootPart.Position
-                if newChar:FindFirstChild("HumanoidRootPart") then
-                    newChar.HumanoidRootPart.CFrame = CFrame.new(oldPosition + Vector3.new(0, 5, 0))
-                end
-            end
-        end
-    end))
-    
-    -- УРОВЕНЬ 6: Защита от различных видов урона
-    table.insert(GodMode.Connections, RunService.Stepped:Connect(function()
+    GodMode.Connection = RunService.Heartbeat:Connect(function()
         if not GodMode.Enabled then return end
         
         pcall(function()
-            local currentChar = LocalPlayer.Character
-            if not currentChar then return end
+            local character = LocalPlayer.Character
+            if not character then return end
             
-            -- Защита от огня и лавы
-            for _, part in pairs(workspace:GetDescendants()) do
-                if part:IsA("Fire") or part:IsA("Sparkles") or part.Name:lower():find("fire") or part.Name:lower():find("lava") then
-                    if part:IsA("BasePart") and currentChar:FindFirstChild("HumanoidRootPart") then
-                        local distance = (currentChar.HumanoidRootPart.Position - part.Position).Magnitude
-                        if distance < 10 then
-                            local humanoid = currentChar:FindFirstChildOfClass("Humanoid")
-                            if humanoid then
-                                humanoid.Health = humanoid.MaxHealth
-                            end
-                        end
-                    end
-                end
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if not humanoid then return end
+            
+            -- ПРОСТАЯ И ЭФФЕКТИВНАЯ ЗАЩИТА
+            humanoid.Health = humanoid.MaxHealth
+            
+            -- Защита от смерти
+            if humanoid.Health <= 0 then
+                humanoid.Health = humanoid.MaxHealth
             end
         end)
-    end))
-    
-    Notify("⚡ GOD MODE АКТИВИРОВАН (Уровень 6 защиты)")
+    end)
 end
 
-local function DisableAdvancedGodMode()
-    for _, connection in pairs(GodMode.Connections) do
-        connection:Disconnect()
+local function DisableGodMode()
+    if GodMode.Connection then
+        GodMode.Connection:Disconnect()
+        GodMode.Connection = nil
     end
-    GodMode.Connections = {}
-    GodMode.Enabled = false
 end
 
 -- НАСТРОЙКИ ТЕЛЕПОРТА НА КУРСОР
@@ -198,7 +66,7 @@ local TeleportSettings = {
     Connection = nil
 }
 
--- УЛУЧШЕННАЯ СИСТЕМА СКОРОСТИ С АВТОМАТИЧЕСКИМ ВЫБОРОМ МЕТОДА
+-- УЛУЧШЕННАЯ СИСТЕМА СКОРОСТИ
 local AdvancedSpeed = {
     Enabled = false,
     Value = 50,
@@ -223,9 +91,7 @@ local function EnableBodyVelocitySpeed()
         AdvancedSpeed.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
         AdvancedSpeed.BodyVelocity.MaxForce = Vector3.new(10000, 0, 10000)
         AdvancedSpeed.BodyVelocity.P = 1250
-        
-        local randomNames = {"VelocityHelper", "MoveAssist", "PlayerHelper"}
-        AdvancedSpeed.BodyVelocity.Name = randomNames[math.random(1, #randomNames)]
+        AdvancedSpeed.BodyVelocity.Name = "SpeedHelper"
         AdvancedSpeed.BodyVelocity.Parent = humanoidRootPart
     end)
 
@@ -306,7 +172,7 @@ local function EnableAdvancedSpeed()
     return success
 end
 
--- УЛУЧШЕННЫЙ ТЕЛЕПОРТ НА КУРСОР С НАСТРАИВАЕМОЙ КЛАВИШЕЙ
+-- УЛУЧШЕННЫЙ ТЕЛЕПОРТ НА КУРСОР
 local function TpToCursor()
     if not LocalPlayer.Character then
         Notify("Персонаж не найден")
@@ -335,7 +201,7 @@ local function TpToCursor()
     end
 end
 
--- ФУНКЦИЯ ДЛЯ ОБРАБОТКИ НАЖАТИЯ КЛАВИШ ТЕЛЕПОРТА
+-- ОБРАБОТКА КЛАВИШ ТЕЛЕПОРТА
 local function StartTeleportListener()
     if TeleportSettings.Connection then
         TeleportSettings.Connection:Disconnect()
@@ -399,12 +265,12 @@ local Settings = {
         FOV = 100,
         Smoothness = 10,
         Part = "Head",
-        TeamCheck = true,
-        VisibleCheck = true,
+        TeamCheck = false,  -- ВЫКЛЮЧЕНО ПО УМОЛЧАНИЮ
+        VisibleCheck = false,  -- ВЫКЛЮЧЕНО ПО УМОЛЧАНИЮ
         Prediction = false,
         PredictionAmount = 0.1,
         MaxDistance = 500,
-        WallCheck = true,
+        WallCheck = false,  -- ВЫКЛЮЧЕНО ПО УМОЛЧАНИЮ
         Priority = "Closest"
     }
 }
@@ -416,6 +282,244 @@ local function Notify(message)
         Content = message,
         Duration = 3.0
     })
+end
+
+-- УЛУЧШЕННЫЙ ESP С ЛУЧШИМ ВИЗУАЛОМ
+local function CreateESP(player)
+    if Settings.Esp.Boxes[player] then return end
+    
+    local box = Drawing.new("Square")
+    box.Visible = false
+    box.Color = Settings.Esp.BoxColor
+    box.Thickness = 2
+    box.Filled = false
+    
+    local name = Drawing.new("Text")
+    name.Visible = false
+    name.Color = Settings.Esp.TextColor
+    name.Size = 18
+    name.Center = true
+    name.Outline = true
+    name.Text = player.Name
+    
+    local distance = Drawing.new("Text")
+    distance.Visible = false
+    distance.Color = Color3.fromRGB(255, 255, 0)
+    distance.Size = 16
+    distance.Center = true
+    distance.Outline = true
+    
+    local healthBar = Drawing.new("Square")
+    healthBar.Visible = false
+    healthBar.Color = Color3.fromRGB(0, 255, 0)
+    healthBar.Thickness = 1
+    healthBar.Filled = true
+    
+    local healthBackground = Drawing.new("Square")
+    healthBackground.Visible = false
+    healthBackground.Color = Color3.fromRGB(50, 50, 50)
+    healthBackground.Thickness = 1
+    healthBackground.Filled = true
+    
+    local healthText = Drawing.new("Text")
+    healthText.Visible = false
+    healthText.Color = Color3.fromRGB(255, 255, 255)
+    healthText.Size = 14
+    healthText.Center = true
+    healthText.Outline = true
+    
+    local aimbotStatus = Drawing.new("Text")
+    aimbotStatus.Visible = false
+    aimbotStatus.Color = Color3.fromRGB(255, 255, 0)
+    aimbotStatus.Size = 14
+    aimbotStatus.Center = true
+    aimbotStatus.Outline = true
+    aimbotStatus.Text = "🎯"
+    
+    local tracer = Drawing.new("Line")
+    tracer.Visible = false
+    tracer.Color = Settings.Esp.TracerColor
+    tracer.Thickness = 2
+    
+    Settings.Esp.Boxes[player] = box
+    Settings.Esp.Names[player] = name
+    Settings.Esp.Distances[player] = distance
+    Settings.Esp.HealthBars[player] = healthBar
+    Settings.Esp.HealthTexts[player] = healthText
+    Settings.Esp.AimbotStatus[player] = aimbotStatus
+    Settings.Esp.Tracers[player] = tracer
+end
+
+local function RemoveESP(player)
+    for _, drawing in pairs({
+        Settings.Esp.Boxes[player],
+        Settings.Esp.Names[player],
+        Settings.Esp.Distances[player],
+        Settings.Esp.HealthBars[player],
+        Settings.Esp.HealthTexts[player],
+        Settings.Esp.AimbotStatus[player],
+        Settings.Esp.Tracers[player]
+    }) do
+        if drawing then
+            drawing:Remove()
+        end
+    end
+    
+    Settings.Esp.Boxes[player] = nil
+    Settings.Esp.Names[player] = nil
+    Settings.Esp.Distances[player] = nil
+    Settings.Esp.HealthBars[player] = nil
+    Settings.Esp.HealthTexts[player] = nil
+    Settings.Esp.AimbotStatus[player] = nil
+    Settings.Esp.Tracers[player] = nil
+end
+
+local function UpdateESP()
+    if not Settings.Esp.Enabled then return end
+    
+    local localChar = LocalPlayer.Character
+    local localRoot = localChar and localChar:FindFirstChild("HumanoidRootPart")
+    if not localRoot then return end
+    
+    local viewportSize = Camera.ViewportSize
+    local screenCenter = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+    
+    for player, box in pairs(Settings.Esp.Boxes) do
+        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local character = player.Character
+            local rootPart = character.HumanoidRootPart
+            local humanoid = character:FindFirstChild("Humanoid")
+            
+            local distance = (localRoot.Position - rootPart.Position).Magnitude
+            local position, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
+            
+            if onScreen and distance <= Settings.Esp.MaxDistance then
+                local size = Vector2.new(2000 / position.Z, 4000 / position.Z)
+                
+                -- БОКС
+                if Settings.Esp.ShowBox then
+                    box.Size = size
+                    box.Position = Vector2.new(position.X - size.X / 2, position.Y - size.Y / 2)
+                    box.Visible = true
+                    
+                    if Settings.Esp.TeamColor and player.Team then
+                        box.Color = player.Team.TeamColor.Color
+                    else
+                        box.Color = Settings.Esp.BoxColor
+                    end
+                else
+                    box.Visible = false
+                end
+                
+                -- ИМЯ
+                if Settings.Esp.ShowName then
+                    local name = Settings.Esp.Names[player]
+                    name.Position = Vector2.new(position.X, position.Y - size.Y / 2 - 25)
+                    name.Visible = true
+                    name.Color = Settings.Esp.TextColor
+                else
+                    Settings.Esp.Names[player].Visible = false
+                end
+                
+                -- ДИСТАНЦИЯ
+                if Settings.Esp.ShowDistance then
+                    local distanceText = Settings.Esp.Distances[player]
+                    distanceText.Text = math.floor(distance) .. " studs"
+                    distanceText.Position = Vector2.new(position.X, position.Y - size.Y / 2 - 45)
+                    distanceText.Visible = true
+                else
+                    Settings.Esp.Distances[player].Visible = false
+                end
+                
+                -- ЗДОРОВЬЕ
+                if Settings.Esp.ShowHealth and humanoid then
+                    local healthPercent = humanoid.Health / humanoid.MaxHealth
+                    local healthBar = Settings.Esp.HealthBars[player]
+                    local healthText = Settings.Esp.HealthTexts[player]
+                    
+                    local barWidth = 4
+                    local barHeight = size.Y
+                    local barX = position.X - size.X / 2 - 10
+                    local barY = position.Y - size.Y / 2
+                    
+                    -- Фон здоровья
+                    healthBar.Size = Vector2.new(barWidth, barHeight * healthPercent)
+                    healthBar.Position = Vector2.new(barX, barY + barHeight * (1 - healthPercent))
+                    healthBar.Visible = true
+                    
+                    -- Цвет здоровья
+                    if healthPercent > 0.7 then
+                        healthBar.Color = Color3.fromRGB(0, 255, 0)
+                    elseif healthPercent > 0.3 then
+                        healthBar.Color = Color3.fromRGB(255, 255, 0)
+                    else
+                        healthBar.Color = Color3.fromRGB(255, 0, 0)
+                    end
+                    
+                    -- Текст здоровья
+                    healthText.Text = tostring(math.floor(humanoid.Health))
+                    healthText.Position = Vector2.new(barX - 20, barY + barHeight / 2 - 7)
+                    healthText.Visible = true
+                else
+                    Settings.Esp.HealthBars[player].Visible = false
+                    Settings.Esp.HealthTexts[player].Visible = false
+                end
+                
+                -- ТРЕЙСЕРЫ
+                if Settings.Esp.ShowTracers then
+                    local tracer = Settings.Esp.Tracers[player]
+                    tracer.From = Vector2.new(viewportSize.X / 2, viewportSize.Y)
+                    tracer.To = Vector2.new(position.X, position.Y)
+                    tracer.Visible = true
+                else
+                    Settings.Esp.Tracers[player].Visible = false
+                end
+            else
+                box.Visible = false
+                Settings.Esp.Names[player].Visible = false
+                Settings.Esp.Distances[player].Visible = false
+                Settings.Esp.HealthBars[player].Visible = false
+                Settings.Esp.HealthTexts[player].Visible = false
+                Settings.Esp.AimbotStatus[player].Visible = false
+                Settings.Esp.Tracers[player].Visible = false
+            end
+        else
+            box.Visible = false
+            Settings.Esp.Names[player].Visible = false
+            Settings.Esp.Distances[player].Visible = false
+            Settings.Esp.HealthBars[player].Visible = false
+            Settings.Esp.HealthTexts[player].Visible = false
+            Settings.Esp.AimbotStatus[player].Visible = false
+            Settings.Esp.Tracers[player].Visible = false
+        end
+    end
+end
+
+local function EnableESP()
+    Settings.Esp.Enabled = true
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            CreateESP(player)
+        end
+    end
+    
+    local ESPConnection
+    ESPConnection = RunService.RenderStepped:Connect(function()
+        if not Settings.Esp.Enabled then
+            ESPConnection:Disconnect()
+            return
+        end
+        UpdateESP()
+    end)
+end
+
+local function DisableESP()
+    Settings.Esp.Enabled = false
+    
+    for player in pairs(Settings.Esp.Boxes) do
+        RemoveESP(player)
+    end
 end
 
 -- ИСПРАВЛЕННЫЙ АИМБОТ
@@ -442,51 +546,6 @@ local function CreateFOVCircle()
     Aimbot.FOVCircle = Circle
 end
 
-local function IsTargetVisible(target)
-    if not Settings.Aimbot.VisibleCheck then return true end
-    if not Settings.Aimbot.WallCheck then return true end
-    
-    local character = LocalPlayer.Character
-    local targetChar = target.Character
-    if not character or not targetChar then return false end
-    
-    local origin = Camera.CFrame.Position
-    local targetPart = targetChar:FindFirstChild(Settings.Aimbot.Part)
-    if not targetPart then return false end
-    
-    local direction = (targetPart.Position - origin).Unit
-    local ray = Ray.new(origin, direction * Settings.Aimbot.MaxDistance)
-    
-    local ignoreList = {character, targetChar}
-    local hit, position = workspace:FindPartOnRayWithIgnoreList(ray, ignoreList)
-    
-    return hit == nil or hit:IsDescendantOf(targetChar)
-end
-
-local function IsEnemy(target)
-    if not Settings.Aimbot.TeamCheck then return true end
-    
-    local localTeam = LocalPlayer.Team
-    local targetTeam = target.Team
-    
-    return not localTeam or not targetTeam or localTeam ~= targetTeam
-end
-
-local function IsInRange(target)
-    local character = LocalPlayer.Character
-    local targetChar = target.Character
-    
-    if not character or not targetChar then return false end
-    
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
-    
-    if not humanoidRootPart or not targetRoot then return false end
-    
-    local distance = (humanoidRootPart.Position - targetRoot.Position).Magnitude
-    return distance <= Settings.Aimbot.MaxDistance
-end
-
 local function IsValidTarget(target)
     if target == LocalPlayer then return false end
     if not target.Character then return false end
@@ -497,9 +556,25 @@ local function IsValidTarget(target)
     local targetPart = target.Character:FindFirstChild(Settings.Aimbot.Part)
     if not targetPart then return false end
     
-    if not IsEnemy(target) then return false end
-    if not IsInRange(target) then return false end
-    if not IsTargetVisible(target) then return false end
+    -- ПРОВЕРКИ ВЫКЛЮЧЕНЫ ПО УМОЛЧАНИЮ
+    if Settings.Aimbot.TeamCheck then
+        local localTeam = LocalPlayer.Team
+        local targetTeam = target.Team
+        if localTeam and targetTeam and localTeam == targetTeam then
+            return false
+        end
+    end
+    
+    local character = LocalPlayer.Character
+    local targetChar = target.Character
+    if not character or not targetChar then return false end
+    
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart or not targetRoot then return false end
+    
+    local distance = (humanoidRootPart.Position - targetRoot.Position).Magnitude
+    if distance > Settings.Aimbot.MaxDistance then return false end
     
     local vector, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
     if not onScreen then return false end
@@ -540,16 +615,6 @@ local function GetBestTarget()
             if humanoidRootPart and targetRoot then
                 local distance = (humanoidRootPart.Position - targetRoot.Position).Magnitude
                 score = score + (Settings.Aimbot.MaxDistance - distance) / 3
-            end
-        end
-        
-        local humanoid = targetChar:FindFirstChild("Humanoid")
-        if humanoid then
-            local healthPercent = humanoid.Health / humanoid.MaxHealth
-            if healthPercent < 0.3 then
-                score = score + 40
-            elseif healthPercent < 0.6 then
-                score = score + 20
             end
         end
         
@@ -643,275 +708,7 @@ local function StopAimbot()
     Aimbot.IsAiming = false
 end
 
--- ESP система
-local function CreateESP(player)
-    if Settings.Esp.Boxes[player] then return end
-    
-    local box = Drawing.new("Square")
-    box.Visible = false
-    box.Color = Settings.Esp.BoxColor
-    box.Thickness = 2
-    box.Filled = false
-    
-    local name = Drawing.new("Text")
-    name.Visible = false
-    name.Color = Settings.Esp.TextColor
-    name.Size = 16
-    name.Center = true
-    name.Outline = true
-    name.Text = player.Name
-    
-    local distance = Drawing.new("Text")
-    distance.Visible = false
-    distance.Color = Settings.Esp.TextColor
-    distance.Size = 14
-    distance.Center = true
-    distance.Outline = true
-    
-    local healthBar = Drawing.new("Square")
-    healthBar.Visible = false
-    healthBar.Color = Color3.fromRGB(0, 255, 0)
-    healthBar.Thickness = 1
-    healthBar.Filled = true
-    
-    local healthText = Drawing.new("Text")
-    healthText.Visible = false
-    healthText.Color = Color3.fromRGB(255, 255, 255)
-    healthText.Size = 14
-    healthText.Center = true
-    healthText.Outline = true
-    
-    local aimbotStatus = Drawing.new("Text")
-    aimbotStatus.Visible = false
-    aimbotStatus.Color = Color3.fromRGB(255, 255, 0)
-    aimbotStatus.Size = 12
-    aimbotStatus.Center = true
-    aimbotStatus.Outline = true
-    aimbotStatus.Text = "🎯"
-    
-    local tracer = Drawing.new("Line")
-    tracer.Visible = false
-    tracer.Color = Settings.Esp.TracerColor
-    tracer.Thickness = 1
-    
-    Settings.Esp.Boxes[player] = box
-    Settings.Esp.Names[player] = name
-    Settings.Esp.Distances[player] = distance
-    Settings.Esp.HealthBars[player] = healthBar
-    Settings.Esp.HealthTexts[player] = healthText
-    Settings.Esp.AimbotStatus[player] = aimbotStatus
-    Settings.Esp.Tracers[player] = tracer
-end
-
-local function RemoveESP(player)
-    for _, drawing in pairs({
-        Settings.Esp.Boxes[player],
-        Settings.Esp.Names[player],
-        Settings.Esp.Distances[player],
-        Settings.Esp.HealthBars[player],
-        Settings.Esp.HealthTexts[player],
-        Settings.Esp.AimbotStatus[player],
-        Settings.Esp.Tracers[player]
-    }) do
-        if drawing then
-            drawing:Remove()
-        end
-    end
-    
-    Settings.Esp.Boxes[player] = nil
-    Settings.Esp.Names[player] = nil
-    Settings.Esp.Distances[player] = nil
-    Settings.Esp.HealthBars[player] = nil
-    Settings.Esp.HealthTexts[player] = nil
-    Settings.Esp.AimbotStatus[player] = nil
-    Settings.Esp.Tracers[player] = nil
-end
-
-local function UpdateESP()
-    if not Settings.Esp.Enabled then return end
-    
-    local localChar = LocalPlayer.Character
-    local localRoot = localChar and localChar:FindFirstChild("HumanoidRootPart")
-    if not localRoot then return end
-    
-    local viewportSize = Camera.ViewportSize
-    local screenCenter = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
-    
-    for player, box in pairs(Settings.Esp.Boxes) do
-        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local character = player.Character
-            local rootPart = character.HumanoidRootPart
-            local humanoid = character:FindFirstChild("Humanoid")
-            
-            local distance = (localRoot.Position - rootPart.Position).Magnitude
-            local position, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
-            
-            if onScreen and distance <= Settings.Esp.MaxDistance then
-                local size = Vector2.new(2000 / position.Z, 4000 / position.Z)
-                
-                if Settings.Esp.ShowBox then
-                    box.Size = size
-                    box.Position = Vector2.new(position.X - size.X / 2, position.Y - size.Y / 2)
-                    box.Visible = true
-                    
-                    if player == Aimbot.Target and Settings.Aimbot.Enabled then
-                        box.Color = Color3.fromRGB(255, 0, 0)
-                    elseif Settings.Aimbot.Enabled and Settings.Esp.ShowAimbotStatus then
-                        if IsValidTarget(player) then
-                            box.Color = Color3.fromRGB(0, 255, 0)
-                        else
-                            box.Color = Color3.fromRGB(0, 100, 255)
-                        end
-                    else
-                        if Settings.Esp.TeamColor and player.Team then
-                            box.Color = player.Team.TeamColor.Color
-                        else
-                            box.Color = Settings.Esp.BoxColor
-                        end
-                    end
-                else
-                    box.Visible = false
-                end
-                
-                if Settings.Esp.ShowName then
-                    local name = Settings.Esp.Names[player]
-                    name.Position = Vector2.new(position.X, position.Y - size.Y / 2 - 20)
-                    name.Visible = true
-                else
-                    Settings.Esp.Names[player].Visible = false
-                end
-                
-                if Settings.Esp.ShowDistance then
-                    local distanceText = Settings.Esp.Distances[player]
-                    distanceText.Text = math.floor(distance) .. " studs"
-                    distanceText.Position = Vector2.new(position.X, position.Y - size.Y / 2 - 40)
-                    distanceText.Visible = true
-                else
-                    Settings.Esp.Distances[player].Visible = false
-                end
-                
-                if Settings.Esp.ShowHealth and humanoid then
-                    local healthPercent = humanoid.Health / humanoid.MaxHealth
-                    local healthBar = Settings.Esp.HealthBars[player]
-                    local healthText = Settings.Esp.HealthTexts[player]
-                    
-                    local barWidth = 3
-                    local barHeight = size.Y * healthPercent
-                    local barX = position.X - size.X / 2 - 8
-                    local barY = position.Y + size.Y / 2 - barHeight
-                    
-                    healthBar.Size = Vector2.new(barWidth, barHeight)
-                    healthBar.Position = Vector2.new(barX, barY)
-                    healthBar.Visible = true
-                    
-                    if healthPercent > 0.7 then
-                        healthBar.Color = Color3.fromRGB(0, 255, 0)
-                    elseif healthPercent > 0.3 then
-                        healthBar.Color = Color3.fromRGB(255, 255, 0)
-                    else
-                        healthBar.Color = Color3.fromRGB(255, 0, 0)
-                    end
-                    
-                    healthText.Text = tostring(math.floor(humanoid.Health))
-                    healthText.Position = Vector2.new(barX - 15, barY + barHeight / 2 - 7)
-                    healthText.Visible = true
-                else
-                    Settings.Esp.HealthBars[player].Visible = false
-                    Settings.Esp.HealthTexts[player].Visible = false
-                end
-                
-                if Settings.Esp.ShowAimbotStatus and Settings.Aimbot.Enabled then
-                    local aimbotStatus = Settings.Esp.AimbotStatus[player]
-                    aimbotStatus.Position = Vector2.new(position.X, position.Y + size.Y / 2 + 25)
-                    
-                    if player == Aimbot.Target then
-                        aimbotStatus.Text = "🔒"
-                        aimbotStatus.Color = Color3.fromRGB(255, 0, 0)
-                    elseif IsValidTarget(player) then
-                        aimbotStatus.Text = "🎯"
-                        aimbotStatus.Color = Color3.fromRGB(0, 255, 0)
-                    else
-                        aimbotStatus.Text = "🚫"
-                        aimbotStatus.Color = Color3.fromRGB(255, 0, 0)
-                    end
-                    aimbotStatus.Visible = true
-                else
-                    Settings.Esp.AimbotStatus[player].Visible = false
-                end
-                
-                if Settings.Esp.ShowTracers then
-                    local tracer = Settings.Esp.Tracers[player]
-                    tracer.From = screenCenter
-                    tracer.To = Vector2.new(position.X, position.Y)
-                    tracer.Visible = true
-                else
-                    Settings.Esp.Tracers[player].Visible = false
-                end
-            else
-                box.Visible = false
-                Settings.Esp.Names[player].Visible = false
-                Settings.Esp.Distances[player].Visible = false
-                Settings.Esp.HealthBars[player].Visible = false
-                Settings.Esp.HealthTexts[player].Visible = false
-                Settings.Esp.AimbotStatus[player].Visible = false
-                Settings.Esp.Tracers[player].Visible = false
-            end
-        else
-            box.Visible = false
-            Settings.Esp.Names[player].Visible = false
-            Settings.Esp.Distances[player].Visible = false
-            Settings.Esp.HealthBars[player].Visible = false
-            Settings.Esp.HealthTexts[player].Visible = false
-            Settings.Esp.AimbotStatus[player].Visible = false
-            Settings.Esp.Tracers[player].Visible = false
-        end
-    end
-end
-
-local function EnableESP()
-    Settings.Esp.Enabled = true
-    
-    Settings.Esp.Boxes = {}
-    Settings.Esp.Names = {}
-    Settings.Esp.Distances = {}
-    Settings.Esp.HealthBars = {}
-    Settings.Esp.HealthTexts = {}
-    Settings.Esp.AimbotStatus = {}
-    Settings.Esp.Tracers = {}
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            CreateESP(player)
-        end
-    end
-    
-    local ESPConnection
-    ESPConnection = RunService.RenderStepped:Connect(function()
-        if not Settings.Esp.Enabled then
-            ESPConnection:Disconnect()
-            return
-        end
-        UpdateESP()
-    end)
-end
-
-local function DisableESP()
-    Settings.Esp.Enabled = false
-    
-    for player in pairs(Settings.Esp.Boxes) do
-        RemoveESP(player)
-    end
-    
-    Settings.Esp.Boxes = {}
-    Settings.Esp.Names = {}
-    Settings.Esp.Distances = {}
-    Settings.Esp.HealthBars = {}
-    Settings.Esp.HealthTexts = {}
-    Settings.Esp.AimbotStatus = {}
-    Settings.Esp.Tracers = {}
-end
-
--- Система полета
+-- СИСТЕМА ПОЛЕТА
 local Fly = {
     Connection = nil,
     BodyVelocity = nil
@@ -987,7 +784,7 @@ local function StopFly()
     end)
 end
 
--- Ноклип
+-- НОКЛИП
 local NoclipConnection
 local function EnableNoclip()
     if NoclipConnection then return end
@@ -1014,11 +811,11 @@ local function DisableNoclip()
     end
 end
 
--- Интерфейс
+-- ИНТЕРФЕЙС
 local MainTab = Window:CreateTab("Главная")
 local MovementSection = MainTab:CreateSection("Передвижение")
 
--- НАСТРОЙКИ ТЕЛЕПОРТА НА КУРСОР
+-- ТЕЛЕПОРТ НА КУРСОР
 local TeleportToggle = MainTab:CreateToggle({
     Name = "📌 ТЕЛЕПОРТ НА КУРСОР",
     CurrentValue = false,
@@ -1034,7 +831,6 @@ local TeleportToggle = MainTab:CreateToggle({
     end
 })
 
--- ВЫБОР КЛАВИШИ ДЛЯ ТЕЛЕПОРТА
 local TeleportKeyDropdown = MainTab:CreateDropdown({
     Name = "🔤 КЛАВИША ТЕЛЕПОРТА",
     Options = {"X", "C", "V", "F", "G", "T", "Y", "B", "N", "M"},
@@ -1147,7 +943,7 @@ local InfiniteJumpToggle = MainTab:CreateToggle({
     end
 })
 
--- Вкладка ESP
+-- ВКЛАДКА ESP
 local VisualsTab = Window:CreateTab("ESP")
 local VisualsSection = VisualsTab:CreateSection("Основные настройки")
 
@@ -1205,14 +1001,6 @@ local TracerToggle = VisualsTab:CreateToggle({
     end
 })
 
-local AimbotStatusToggle = VisualsTab:CreateToggle({
-    Name = "🎯 ПОКАЗЫВАТЬ СТАТУС АИМБОТА",
-    CurrentValue = true,
-    Callback = function(Value)
-        Settings.Esp.ShowAimbotStatus = Value
-    end
-})
-
 local TeamColorToggle = VisualsTab:CreateToggle({
     Name = "🎨 ЦВЕТ ПО КОМАНДАМ",
     CurrentValue = true,
@@ -1232,7 +1020,7 @@ local MaxDistanceSlider = VisualsTab:CreateSlider({
     end
 })
 
--- Вкладка Аимбот
+-- ВКЛАДКА АИМБОТ
 local CombatTab = Window:CreateTab("Аимбот")
 local AimbotSection = CombatTab:CreateSection("Настройки аимбота")
 
@@ -1295,7 +1083,7 @@ local AimbotMaxDistanceSlider = CombatTab:CreateSlider({
 
 local TeamCheckToggle = CombatTab:CreateToggle({
     Name = "🎪 ПРОВЕРКА КОМАНДЫ",
-    CurrentValue = true,
+    CurrentValue = false,  -- ВЫКЛЮЧЕНО ПО УМОЛЧАНИЮ
     Callback = function(Value)
         Settings.Aimbot.TeamCheck = Value
     end
@@ -1303,26 +1091,34 @@ local TeamCheckToggle = CombatTab:CreateToggle({
 
 local VisibleCheckToggle = CombatTab:CreateToggle({
     Name = "👁️ ПРОВЕРКА ВИДИМОСТИ",
-    CurrentValue = true,
+    CurrentValue = false,  -- ВЫКЛЮЧЕНО ПО УМОЛЧАНИЮ
     Callback = function(Value)
         Settings.Aimbot.VisibleCheck = Value
     end
 })
 
--- Вкладка Защита
+local WallCheckToggle = CombatTab:CreateToggle({
+    Name = "🧱 ПРОВЕРКА СТЕН",
+    CurrentValue = false,  -- ВЫКЛЮЧЕНО ПО УМОЛЧАНИЮ
+    Callback = function(Value)
+        Settings.Aimbot.WallCheck = Value
+    end
+})
+
+-- ВКЛАДКА ЗАЩИТА
 local ProtectionTab = Window:CreateTab("Защита")
 local ProtectionSection = ProtectionTab:CreateSection("Функции защиты")
 
 local GodModeToggle = ProtectionTab:CreateToggle({
-    Name = "💀 ADVANCED GOD MODE",
+    Name = "💀 GOD MODE (НАСТОЯЩАЯ НЕУЯЗВИМОСТЬ)",
     CurrentValue = false,
     Callback = function(Value)
         GodMode.Enabled = Value
         if Value then
-            EnableAdvancedGodMode()
-            Notify("⚡ ADVANCED GOD MODE АКТИВИРОВАН!")
+            EnableGodMode()
+            Notify("⚡ GOD MODE АКТИВИРОВАН - Вы бессмертны!")
         else
-            DisableAdvancedGodMode()
+            DisableGodMode()
             Notify("GOD MODE выключен")
         end
     end
@@ -1341,7 +1137,7 @@ local AntiAfkToggle = ProtectionTab:CreateToggle({
     end
 })
 
--- Основные циклы
+-- ОСНОВНЫЕ ЦИКЛЫ
 RunService.Heartbeat:Connect(function()
     pcall(function()
         local character = LocalPlayer.Character
@@ -1352,6 +1148,14 @@ RunService.Heartbeat:Connect(function()
             local humanoid = character:FindFirstChild("Humanoid")
             if humanoid then
                 humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end
+        
+        -- God Mode защита
+        if GodMode.Enabled then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health < humanoid.MaxHealth then
+                humanoid.Health = humanoid.MaxHealth
             end
         end
     end)
@@ -1385,9 +1189,10 @@ end)
 pcall(function()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         AdvancedSpeed.OriginalWalkSpeed = LocalPlayer.Character.Humanoid.WalkSpeed
+        GodMode.OriginalWalkSpeed = AdvancedSpeed.OriginalWalkSpeed
     end
 end)
 
 -- Уведомление о загрузке
 Notify("RAGE MOD ULTIMATE v" .. Version .. " загружен!")
-print("⚡ RAGE MOD ULTIMATE v" .. Version .. " | Advanced God Mode активирован")
+print("⚡ RAGE MOD ULTIMATE v" .. Version .. " | Fixed God Mode & Improved ESP")
