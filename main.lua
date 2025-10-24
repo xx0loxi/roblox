@@ -1,13 +1,12 @@
---= RAGE MOD - ULTIMATE VERSION 1.3 BETA =--
+--= RAGE MOD - ULTIMATE VERSION 1.5 BETA =--
 --= АВТОМАТИЧЕСКИЙ СТЕЛС-РЕЖИМ ВКЛЮЧЕН =--
---= ИСПРАВЛЕНО НОЧНОЕ ЗРЕНИЕ =--
---= ДОБАВЛЕН ИНДИКАТОР СТАТУСА =--
+--= ИСПРАВЛЕН АИМБОТ =--
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "⚡ RAGE MOD | ULTIMATE v1.3 BETA",
-    LoadingTitle = "RAGE MOD ULTIMATE v1.3 BETA",
+    Name = "⚡ RAGE MOD | ULTIMATE v1.5 BETA",
+    LoadingTitle = "RAGE MOD ULTIMATE v1.5 BETA",
     LoadingSubtitle = "Loading Advanced Features...",
     Theme = "Dark"
 })
@@ -24,7 +23,7 @@ local Lighting = game:GetService("Lighting")
 local HttpService = game:GetService("HttpService")
 
 -- ВЕРСИЯ
-local Version = "1.3 BETA"
+local Version = "1.5 BETA"
 
 -- АВТОМАТИЧЕСКИЙ СТЕЛС-РЕЖИМ (ВКЛЮЧЕН ПО УМОЛЧАНИЮ)
 local StealthMode = {
@@ -32,70 +31,8 @@ local StealthMode = {
     RandomDelays = true,
     ObfuscateNames = true,
     AntiDetection = true,
-    LastRandomUpdate = 0,
-    Status = "UNDETECTED" -- UNDETECTED, SUSPICIOUS, DETECTED
+    LastRandomUpdate = 0
 }
-
--- ИНДИКАТОР СТАТУСА
-local StatusIndicator = {
-    Dot = nil,
-    Text = nil,
-    Connection = nil
-}
-
--- Создаем индикатор статуса
-local function CreateStatusIndicator()
-    if StatusIndicator.Dot then
-        StatusIndicator.Dot:Remove()
-    end
-    if StatusIndicator.Text then
-        StatusIndicator.Text:Remove()
-    end
-    
-    -- Зеленая точка
-    StatusIndicator.Dot = Drawing.new("Circle")
-    StatusIndicator.Dot.Visible = true
-    StatusIndicator.Dot.Color = Color3.fromRGB(0, 255, 0)
-    StatusIndicator.Dot.Thickness = 3
-    StatusIndicator.Dot.Filled = true
-    StatusIndicator.Dot.Radius = 4
-    StatusIndicator.Dot.Position = Vector2.new(30, 30)
-    
-    -- Текст статуса
-    StatusIndicator.Text = Drawing.new("Text")
-    StatusIndicator.Text.Visible = true
-    StatusIndicator.Text.Color = Color3.fromRGB(0, 255, 0)
-    StatusIndicator.Text.Size = 14
-    StatusIndicator.Text.Outline = true
-    StatusIndicator.Text.Text = "ANTICHEAT: UNDETECTED"
-    StatusIndicator.Text.Position = Vector2.new(45, 23)
-    
-    -- Обновление статуса
-    if StatusIndicator.Connection then
-        StatusIndicator.Connection:Disconnect()
-    end
-    
-    StatusIndicator.Connection = RunService.RenderStepped:Connect(function()
-        local viewportSize = Camera.ViewportSize
-        StatusIndicator.Dot.Position = Vector2.new(30, 30)
-        StatusIndicator.Text.Position = Vector2.new(45, 23)
-        
-        -- Случайное изменение цвета для имитации активности
-        if math.random(1, 200) == 1 then
-            StatusIndicator.Dot.Color = Color3.fromRGB(math.random(0, 100), 255, math.random(0, 100))
-        end
-    end)
-end
-
--- Функция для обновления статуса
-local function UpdateStatus(newStatus, color)
-    StealthMode.Status = newStatus
-    if StatusIndicator.Text then
-        StatusIndicator.Text.Text = "ANTICHEAT: " .. newStatus
-        StatusIndicator.Text.Color = color
-        StatusIndicator.Dot.Color = color
-    end
-end
 
 -- Функция для генерации случайных имен для инстансов
 local function GenerateRandomName()
@@ -111,75 +48,143 @@ local function StealthWait()
     end
 end
 
--- ИСПРАВЛЕННОЕ НОЧНОЕ ЗРЕНИЕ (полностью переработано)
-local NightVision = {
+-- РЕЖИМ СМЕНЫ ВРЕМЕНИ СУТОК (заменяет ночное зрение)
+local TimeOfDay = {
     Enabled = false,
-    Intensity = 100,
+    CurrentTime = "День",
     OriginalProperties = {},
     Connection = nil
 }
 
-local function ApplyNightVision()
-    if not NightVision.Enabled then return end
+-- Настройки для разных времен суток
+local TimePresets = {
+    ["День"] = {
+        ClockTime = 14,
+        Brightness = 2,
+        Ambient = Color3.fromRGB(255, 255, 255),
+        OutdoorAmbient = Color3.fromRGB(128, 128, 128),
+        FogColor = Color3.fromRGB(191, 191, 191),
+        FogEnd = 100000,
+        GlobalShadows = true,
+        ColorShift_Top = Color3.fromRGB(255, 255, 255),
+        ExposureCompensation = 0
+    },
+    ["Ночь"] = {
+        ClockTime = 0,
+        Brightness = 0.1,
+        Ambient = Color3.fromRGB(50, 50, 100),
+        OutdoorAmbient = Color3.fromRGB(50, 50, 100),
+        FogColor = Color3.fromRGB(30, 30, 60),
+        FogEnd = 500,
+        GlobalShadows = false,
+        ColorShift_Top = Color3.fromRGB(100, 100, 150),
+        ExposureCompensation = 1
+    },
+    ["Утро"] = {
+        ClockTime = 6,
+        Brightness = 1.5,
+        Ambient = Color3.fromRGB(255, 200, 150),
+        OutdoorAmbient = Color3.fromRGB(150, 150, 200),
+        FogColor = Color3.fromRGB(200, 180, 150),
+        FogEnd = 2000,
+        GlobalShadows = true,
+        ColorShift_Top = Color3.fromRGB(255, 220, 180),
+        ExposureCompensation = 0.3
+    },
+    ["Вечер"] = {
+        ClockTime = 18,
+        Brightness = 0.8,
+        Ambient = Color3.fromRGB(255, 150, 100),
+        OutdoorAmbient = Color3.fromRGB(200, 150, 100),
+        FogColor = Color3.fromRGB(150, 100, 50),
+        FogEnd = 1000,
+        GlobalShadows = true,
+        ColorShift_Top = Color3.fromRGB(255, 180, 120),
+        ExposureCompensation = 0.5
+    },
+    ["Туман"] = {
+        ClockTime = 10,
+        Brightness = 1.2,
+        Ambient = Color3.fromRGB(200, 200, 200),
+        OutdoorAmbient = Color3.fromRGB(150, 150, 150),
+        FogColor = Color3.fromRGB(150, 150, 150),
+        FogEnd = 200,
+        GlobalShadows = false,
+        ColorShift_Top = Color3.fromRGB(180, 180, 180),
+        ExposureCompensation = 0.7
+    }
+}
+
+local function ApplyTimeOfDay()
+    if not TimeOfDay.Enabled then return end
     
-    local intensity = NightVision.Intensity / 100
+    local preset = TimePresets[TimeOfDay.CurrentTime]
+    if not preset then return end
     
-    -- Применяем настройки ночного зрения
-    Lighting.Ambient = Color3.fromRGB(128 * intensity, 255 * intensity, 128 * intensity)
-    Lighting.OutdoorAmbient = Color3.fromRGB(128 * intensity, 255 * intensity, 128 * intensity)
-    Lighting.Brightness = 0.1 + (0.4 * intensity) -- Плавное изменение яркости
-    Lighting.ColorShift_Top = Color3.fromRGB(100 * intensity, 255 * intensity, 100 * intensity)
-    Lighting.FogColor = Color3.fromRGB(50 * intensity, 150 * intensity, 50 * intensity)
-    Lighting.FogEnd = 5000
-    Lighting.GlobalShadows = false
-    Lighting.ExposureCompensation = 0.5 + (1.0 * intensity)
+    -- Плавное применение изменений
+    local tweenInfo = TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    
+    for property, value in pairs(preset) do
+        if Lighting[property] ~= nil then
+            local tween = TweenService:Create(Lighting, tweenInfo, {[property] = value})
+            tween:Play()
+        end
+    end
 end
 
-local function EnableNightVision()
+local function EnableTimeOfDay()
     -- Сохраняем оригинальные настройки освещения
-    NightVision.OriginalProperties = {
+    TimeOfDay.OriginalProperties = {
+        ClockTime = Lighting.ClockTime,
+        Brightness = Lighting.Brightness,
         Ambient = Lighting.Ambient,
         OutdoorAmbient = Lighting.OutdoorAmbient,
-        Brightness = Lighting.Brightness,
-        ColorShift_Top = Lighting.ColorShift_Top,
         FogColor = Lighting.FogColor,
         FogEnd = Lighting.FogEnd,
         GlobalShadows = Lighting.GlobalShadows,
+        ColorShift_Top = Lighting.ColorShift_Top,
         ExposureCompensation = Lighting.ExposureCompensation
     }
     
-    -- Немедленно применяем ночное зрение
-    ApplyNightVision()
+    -- Немедленно применяем выбранное время суток
+    ApplyTimeOfDay()
     
-    -- Запускаем цикл обновления для обработки изменений интенсивности
-    if NightVision.Connection then
-        NightVision.Connection:Disconnect()
+    -- Запускаем цикл обновления
+    if TimeOfDay.Connection then
+        TimeOfDay.Connection:Disconnect()
     end
     
-    NightVision.Connection = RunService.Heartbeat:Connect(function()
-        if not NightVision.Enabled then return end
-        ApplyNightVision()
+    TimeOfDay.Connection = RunService.Heartbeat:Connect(function()
+        if not TimeOfDay.Enabled then return end
+        
+        -- Плавно обновляем время для реалистичности
+        if TimeOfDay.CurrentTime == "День" then
+            Lighting.ClockTime = Lighting.ClockTime + 0.0001
+        elseif TimeOfDay.CurrentTime == "Ночь" then
+            Lighting.ClockTime = Lighting.ClockTime + 0.00005
+        end
+        
         StealthWait()
     end)
 end
 
-local function DisableNightVision()
+local function DisableTimeOfDay()
     -- Восстанавливаем оригинальные настройки
-    if NightVision.OriginalProperties.Ambient then
-        Lighting.Ambient = NightVision.OriginalProperties.Ambient
-        Lighting.OutdoorAmbient = NightVision.OriginalProperties.OutdoorAmbient
-        Lighting.Brightness = NightVision.OriginalProperties.Brightness
-        Lighting.ColorShift_Top = NightVision.OriginalProperties.ColorShift_Top
-        Lighting.FogColor = NightVision.OriginalProperties.FogColor
-        Lighting.FogEnd = NightVision.OriginalProperties.FogEnd
-        Lighting.GlobalShadows = NightVision.OriginalProperties.GlobalShadows
-        Lighting.ExposureCompensation = NightVision.OriginalProperties.ExposureCompensation
+    if TimeOfDay.OriginalProperties.ClockTime then
+        local tweenInfo = TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        
+        for property, value in pairs(TimeOfDay.OriginalProperties) do
+            if Lighting[property] ~= nil then
+                local tween = TweenService:Create(Lighting, tweenInfo, {[property] = value})
+                tween:Play()
+            end
+        end
     end
     
     -- Останавливаем цикл обновления
-    if NightVision.Connection then
-        NightVision.Connection:Disconnect()
-        NightVision.Connection = nil
+    if TimeOfDay.Connection then
+        TimeOfDay.Connection:Disconnect()
+        TimeOfDay.Connection = nil
     end
 end
 
@@ -908,11 +913,11 @@ local function DisableNoclip()
     end
 end
 
--- ИСПРАВЛЕННЫЙ АИМБОТ С СТЕЛС-РЕЖИМОМ
+-- ИСПРАВЛЕННЫЙ АИМБОТ С СТЕЛС-РЕЖИМОМ (ПОЛНОСТЬЮ ПЕРЕРАБОТАН)
 local AimbotSettings = {
     Enabled = false,
     FOV = 100,
-    Smoothness = 10,
+    Smoothness = 5, -- Теперь это скорость наведения (чем меньше - тем быстрее)
     Part = "Head",
     TeamCheck = false,
     WallCheck = false,
@@ -921,7 +926,8 @@ local AimbotSettings = {
     Target = nil,
     FOVCircle = nil,
     LastUpdate = 0,
-    IsAiming = false
+    IsAiming = false,
+    Prediction = 0.1 -- Предсказание движения цели
 }
 
 local function CreateFOVCircle()
@@ -1026,29 +1032,26 @@ local function SmoothAim(target)
     if not targetPart then return end
     
     local camera = workspace.CurrentCamera
-    local currentTime = tick()
     
-    if currentTime - AimbotSettings.LastUpdate < (1 / AimbotSettings.Smoothness) * 0.1 then
-        return
+    -- Предсказание движения цели
+    local targetPosition = targetPart.Position
+    if targetPart.Velocity.Magnitude > 0 then
+        targetPosition = targetPosition + (targetPart.Velocity * AimbotSettings.Prediction)
     end
-    AimbotSettings.LastUpdate = currentTime
     
-    if AimbotSettings.Smoothness <= 1 then
-        camera.CFrame = CFrame.lookAt(camera.CFrame.Position, targetPart.Position)
-    else
-        local currentCFrame = camera.CFrame
-        local targetCFrame = CFrame.lookAt(currentCFrame.Position, targetPart.Position)
-        
-        local smoothness = math.max(1, AimbotSettings.Smoothness)
-        local lerpAlpha = 1 / smoothness
-        
-        if smoothness <= 5 then
-            lerpAlpha = lerpAlpha * 2
-        end
-        
-        local smoothedCFrame = currentCFrame:Lerp(targetCFrame, lerpAlpha)
-        camera.CFrame = smoothedCFrame
-    end
+    local currentCFrame = camera.CFrame
+    local targetCFrame = CFrame.lookAt(currentCFrame.Position, targetPosition)
+    
+    -- ИСПРАВЛЕННАЯ ФОРМУЛА ПЛАВНОСТИ
+    -- Теперь чем меньше smoothness, тем БЫСТРЕЕ наведение (без дерганий)
+    local smoothnessFactor = math.max(0.1, AimbotSettings.Smoothness / 10)
+    local lerpAlpha = 1 - (smoothnessFactor * 0.15) -- Инверсная зависимость
+    
+    -- Ограничиваем для стабильности
+    lerpAlpha = math.clamp(lerpAlpha, 0.05, 0.95)
+    
+    local smoothedCFrame = currentCFrame:Lerp(targetCFrame, lerpAlpha)
+    camera.CFrame = smoothedCFrame
 end
 
 local function StartAimbot()
@@ -1072,8 +1075,13 @@ local function StartAimbot()
             if AimbotSettings.Target and IsValidTarget(AimbotSettings.Target) then
                 SmoothAim(AimbotSettings.Target)
             else
-                AimbotSettings.Target = nil
-                AimbotSettings.IsAiming = false
+                AimbotSettings.Target = GetBestTarget()
+                if AimbotSettings.Target and IsValidTarget(AimbotSettings.Target) then
+                    SmoothAim(AimbotSettings.Target)
+                else
+                    AimbotSettings.Target = nil
+                    AimbotSettings.IsAiming = false
+                end
             end
         else
             AimbotSettings.Target = nil
@@ -1385,12 +1393,12 @@ local MaxDistanceSlider = VisualsTab:CreateSlider({
     end
 })
 
--- ВКЛАДКА АИМБОТ
+-- ВКЛАДКА АИМБОТ (ПЕРЕРАБОТАНА)
 local CombatTab = Window:CreateTab("Аимбот")
 local AimbotSection = CombatTab:CreateSection("Настройки аимбота")
 
 local AimbotToggle = CombatTab:CreateToggle({
-    Name = "🎯 ВКЛЮЧИТЬ АИМБОТ",
+    Name = "🎯 ВКЛЮЧИТЬ АИМБОТ (ИСПРАВЛЕННЫЙ)",
     CurrentValue = false,
     Callback = function(Value)
         AimbotSettings.Enabled = Value
@@ -1415,8 +1423,9 @@ local AimbotFOVSlider = CombatTab:CreateSlider({
     end
 })
 
+-- ИСПРАВЛЕННЫЙ СЛАЙДЕР ПЛАВНОСТИ (теперь чем меньше - тем быстрее)
 local AimbotSmoothSlider = CombatTab:CreateSlider({
-    Name = "⚡ ПЛАВНОСТЬ АИМБОТА",
+    Name = "⚡ СКОРОСТЬ НАВЕДЕНИЯ (чем меньше - тем быстрее)",
     Range = {1, 20},
     Increment = 1,
     Suffix = "level",
@@ -1500,32 +1509,31 @@ local AntiAfkToggle = ProtectionTab:CreateToggle({
 local VisualTab = Window:CreateTab("Визуал")
 local VisualSection = VisualTab:CreateSection("Визуальные эффекты")
 
--- ИСПРАВЛЕННОЕ НОЧНОЕ ЗРЕНИЕ
-local NightVisionToggle = VisualTab:CreateToggle({
-    Name = "🌙 НОЧНОЕ ЗРЕНИЕ (ИСПРАВЛЕННОЕ)",
+-- РЕЖИМ СМЕНЫ ВРЕМЕНИ СУТОК (заменяет ночное зрение)
+local TimeOfDayToggle = VisualTab:CreateToggle({
+    Name = "🌅 РЕЖИМ СМЕНЫ ВРЕМЕНИ СУТОК",
     CurrentValue = false,
     Callback = function(Value)
-        NightVision.Enabled = Value
+        TimeOfDay.Enabled = Value
         if Value then
-            EnableNightVision()
-            Notify("Ночное зрение включено")
+            EnableTimeOfDay()
+            Notify("Режим смены времени суток включен: " .. TimeOfDay.CurrentTime)
         else
-            DisableNightVision()
-            Notify("Ночное зрение выключено")
+            DisableTimeOfDay()
+            Notify("Режим смены времени суток выключен")
         end
     end
 })
 
-local NightVisionIntensitySlider = VisualTab:CreateSlider({
-    Name = "🔦 ИНТЕНСИВНОСТЬ НОЧНОГО ЗРЕНИЯ",
-    Range = {50, 300},
-    Increment = 10,
-    Suffix = "%",
-    CurrentValue = 100,
-    Callback = function(Value)
-        NightVision.Intensity = Value
-        if NightVision.Enabled then
-            ApplyNightVision() -- Немедленно применяем изменения
+local TimeOfDayDropdown = VisualTab:CreateDropdown({
+    Name = "🕒 ВЫБОР ВРЕМЕНИ СУТОК",
+    Options = {"День", "Ночь", "Утро", "Вечер", "Туман"},
+    CurrentOption = "День",
+    Callback = function(Option)
+        TimeOfDay.CurrentTime = Option
+        if TimeOfDay.Enabled then
+            ApplyTimeOfDay()
+            Notify("Время суток изменено на: " .. Option)
         end
     end
 })
@@ -1552,25 +1560,13 @@ InfoSection:CreateLabel("🔒 СТЕЛС-РЕЖИМ: АКТИВИРОВАН")
 InfoSection:CreateLabel("🛡️ Анти-обнаружение: Включено")
 InfoSection:CreateLabel("⏱️ Случайные задержки: Включено")
 InfoSection:CreateLabel("🔤 Случайные имена: Включено")
-InfoSection:CreateLabel("🌙 Ночное зрение: ПОЛНОСТЬЮ ИСПРАВЛЕНО")
+InfoSection:CreateLabel("🎯 Аимбот: ПОЛНОСТЬЮ ИСПРАВЛЕН")
 InfoSection:CreateLabel("⚡ Версия: " .. Version)
-
--- Индикатор статуса в интерфейсе
-InfoSection:CreateLabel("🟢 Индикатор статуса: АКТИВЕН")
 
 InfoSection:CreateButton({
     Name = "🔄 Проверить обновления",
     Callback = function()
         Notify("Проверка обновлений... Актуальная версия: " .. Version)
-    end
-})
-
--- Тест индикатора статуса
-InfoSection:CreateButton({
-    Name = "🧪 Тест индикатора",
-    Callback = function()
-        UpdateStatus("UNDETECTED", Color3.fromRGB(0, 255, 0))
-        Notify("Статус: UNDETECTED 🟢")
     end
 })
 
@@ -1611,11 +1607,7 @@ pcall(function()
     end
 end)
 
--- СОЗДАЕМ ИНДИКАТОР СТАТУСА ПРИ ЗАГРУЗКЕ
-CreateStatusIndicator()
-UpdateStatus("UNDETECTED", Color3.fromRGB(0, 255, 0))
-
 -- УВЕДОМЛЕНИЕ О ЗАГРУЗКЕ
 Notify("RAGE MOD ULTIMATE v" .. Version .. " загружен! Стелс-режим активирован.")
 print("⚡ RAGE MOD ULTIMATE v" .. Version .. " | Complete Fixed System Loaded | Lines: 1300+")
-print("🔒 STEALTH MODE: ACTIVE | Night Vision: FULLY FIXED | Status Indicator: ACTIVE")
+print("🔒 STEALTH MODE: ACTIVE | AIMBOT: FULLY FIXED | No more jerking!")
